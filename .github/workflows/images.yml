@@ -1,0 +1,32 @@
+name: Container Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: OCI platforms to build.
+        required: true
+        default: linux/amd64
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    name: Build container images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check image readiness
+        run: |
+          set -eu
+          if [ ! -f containers/Containerfile.wolfi ]; then
+            echo "containers/Containerfile.wolfi is not scaffolded yet; image publishing starts in the 0.2.x plan."
+            exit 0
+          fi
+          echo "Containerfile exists; wire build-push-action before publishing release images."
