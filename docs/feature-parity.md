@@ -192,6 +192,23 @@ Every adapter must document:
 | Secret sync | `Post-1.0` | Sync static secrets to external destinations with drift detection and audit. |
 | GitOps reconciliation | `Post-1.0` | Declarative config reconciler, never for secret payloads by default. |
 
+## Stand-Out Roadmap
+
+| Area | Coverage | Plan |
+| --- | --- | --- |
+| Secret inventory | `1.1` | First-class API for owner, use, expiry, rotation, and dependency metadata. |
+| Policy simulator | `1.1` | Explain allow/deny decisions without changing live policy. |
+| Dry-run dangerous changes | `1.1` | Blast-radius preview for mounts, policies, namespaces, deletion, revocation, and rotations. |
+| Local-first developer mode | `1.1` | Safe local profile with reset, samples, generated test PKI, and non-production guardrails. |
+| Secret leak intake | `1.2` | Scanner/CI API for leak findings that can trigger rotation and revocation workflows. |
+| Rotation readiness score | `1.2` | Report whether each secret can rotate automatically, needs manual work, has no owner, or has no revocation path. |
+| Lifecycle webhooks | `1.2` | Signed events for create, read, rotate, lease expiry, revoke, leak, and denied policy events. |
+| Adapter conformance | `1.3` | Required create, renew, revoke, rotate, failure, idempotency, and audit tests for adapters. |
+| Human approval | `1.4` | Open-source control-group style approval for sensitive operations. |
+| Break-glass mode | `1.4` | Quorum-controlled emergency access with forensic trail and time-limited elevation. |
+| Tamper-evident audit bundles | `1.5` | Hash-chained, signed, exportable audit and incident evidence bundles. |
+| Stable Wasm extension platform | `2.0` | Capability-based signed plugins with resource limits, network allowlists, provenance, and conformance. |
+
 ## Deliberate Differences From Vault/OpenBao
 
 - Lykilheim should not claim Vault/OpenBao API compatibility unless an endpoint

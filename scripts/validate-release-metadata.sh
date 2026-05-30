@@ -56,7 +56,7 @@ if ! grep -q 'STOP' docs/version-plan.md; then
     exit 1
 fi
 
-for version in 0.1.0 0.2.0 0.3.0 0.4.0 0.5.0 0.6.0 0.7.0 0.8.0 0.9.0 0.10.0 1.0.0; do
+for version in 0.1.0 0.2.0 0.3.0 0.4.0 0.5.0 0.6.0 0.7.0 0.8.0 0.9.0 0.10.0 1.0.0 1.1.0 1.2.0 1.3.0 1.4.0 1.5.0 2.0.0; do
     notes="release-notes/RELEASE_NOTES_${version}.md"
     if [ ! -f "$notes" ]; then
         echo "release metadata: missing $notes" >&2

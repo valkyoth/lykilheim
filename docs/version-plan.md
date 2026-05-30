@@ -386,3 +386,171 @@ Release gate:
 **STOP:** final 1.0 pentest, release-candidate freeze, maintainer sign-off,
 signed tag, release evidence publication, and post-release monitoring window.
 Release `1.0.0`.
+
+## 1.1.0 - Operator Intelligence
+
+Goal: make Lykilheim easier to operate and debug than Vault/OpenBao without
+changing the stable core.
+
+Scope:
+
+- Add first-class secret inventory APIs covering owner, engine, path, type,
+  dynamic/static status, last access time, lease/expiry state, rotation status,
+  and dependent identities where known.
+- Add policy simulator APIs where operators submit namespace, identity, path,
+  operation, and request context, then receive allow/deny plus matched policies,
+  groups, denies, and missing capabilities.
+- Add dry-run mode for policy changes, mount changes, namespace changes, token
+  revocation, secret deletion, and root/database credential rotation.
+- Add local-first developer mode with safe defaults, obvious non-production
+  warnings, easy reset, sample policies, sample adapters, and generated test PKI.
+
+Tests and scripts:
+
+- Inventory consistency tests across KV, token, lease, auth, and audit paths.
+- Policy simulator golden tests for allow, deny, namespace, identity group, and
+  inherited policy cases.
+- Dry-run blast-radius tests proving no mutation occurs.
+- Developer-mode smoke tests proving reset and sample workflows work locally.
+
+**STOP:** pentest inventory leakage, simulator oracle behavior, dry-run
+mutation safety, and dev-mode production guardrails. Release `1.1.0`.
+
+## 1.2.0 - Leak Response And Rotation Readiness
+
+Goal: turn secret-sprawl findings into actionable, auditable rotation and
+revocation workflows.
+
+Scope:
+
+- Add secret leak intake API for scanners and CI systems to submit findings
+  with source, detector, fingerprint, confidence, path, commit/build metadata,
+  and evidence hash.
+- Correlate leak findings with Lykilheim-managed static secrets, dynamic leases,
+  AppRole SecretIDs, tokens, transit keys, and adapter credentials where safe.
+- Add rotation readiness score for every supported secret or role: automatic,
+  manual, blocked, unsupported, no owner, no revocation path, static long-lived,
+  or missing validation.
+- Add leak-to-rotation workflows for supported engines and adapters, including
+  approval hooks where needed.
+- Add lifecycle webhooks for `created`, `read`, `rotated`, `lease-expiring`,
+  `revoked`, `leak-reported`, and `policy-denied`.
+
+Tests and scripts:
+
+- Leak intake validation and redaction tests.
+- Correlation tests that avoid storing raw leaked values.
+- Rotation readiness matrix tests for supported engine and adapter types.
+- Webhook delivery, retry, signing, and failure-mode tests.
+
+**STOP:** pentest leak evidence handling, correlation privacy, webhook signing,
+rotation race conditions, and false-positive handling. Release `1.2.0`.
+
+## 1.3.0 - Adapter Certification
+
+Goal: make dynamic adapters safer and more predictable than normal plugin
+ecosystems.
+
+Scope:
+
+- Add adapter conformance test framework with required create, renew, revoke,
+  rotate, permission failure, network failure, idempotency, rollback, and audit
+  redaction cases.
+- Add certification metadata for native adapters and future Wasm adapters.
+- Promote PostgreSQL conformance to stable and add MySQL/MariaDB conformance.
+- Add experimental conformance tracks for MongoDB, Redis/Valkey, SurrealDB,
+  RabbitMQ, AWS, Azure, GCP, Hetzner, and DigitalOcean where upstream APIs allow
+  safe credential lifecycle management.
+- Add adapter capability discovery API so operators can see which features are
+  supported by each adapter.
+
+Tests and scripts:
+
+- Generic adapter conformance runner.
+- Local rootless Podman smoke for adapters that can run locally.
+- Failure injection tests for upstream outage and partial revocation.
+- Certification metadata validation.
+
+**STOP:** pentest adapter privilege boundaries, revocation correctness,
+credential leakage, and certification bypass. Release `1.3.0`.
+
+## 1.4.0 - Human Approval And Break-Glass
+
+Goal: add open-source governance workflows for sensitive operations without
+requiring enterprise licensing.
+
+Scope:
+
+- Add control-group style human approval workflows for sensitive paths and
+  operations.
+- Support quorum rules such as security plus DBA approval, two-maintainer
+  approval, namespace-admin approval, or emergency-only approval.
+- Add break-glass mode with quorum, reason capture, time-limited elevation,
+  forced audit marking, post-incident summary, and signed evidence bundle.
+- Add approval APIs, pending-request APIs, expiration, cancellation, and audit
+  trails.
+- Add policy integration so approval can be required for unwrap, root credential
+  access, mount deletion, rekey, namespace deletion, and adapter root rotation.
+
+Tests and scripts:
+
+- Approval workflow tests for approve, deny, timeout, cancellation, replay, and
+  quorum mismatch.
+- Break-glass tests for time limits, reason capture, audit markers, and
+  privilege rollback.
+- Policy integration tests for approval-required paths.
+
+**STOP:** pentest approval bypass, replay, privilege retention after expiry,
+break-glass abuse, and audit evidence integrity. Release `1.4.0`.
+
+## 1.5.0 - Tamper-Evident Operations
+
+Goal: make audit and lifecycle events easier to prove after an incident.
+
+Scope:
+
+- Add tamper-evident audit bundles with hash chaining and signed checkpoints.
+- Add exportable evidence bundles for incident response, break-glass sessions,
+  leak response workflows, adapter rotations, and policy changes.
+- Add optional external checkpoint publishing to operator-controlled storage.
+- Add audit verification tooling and APIs.
+- Add lifecycle event replay APIs for SIEM and compliance workflows.
+
+Tests and scripts:
+
+- Hash-chain verification tests.
+- Bundle signing and verification tests.
+- Tamper detection tests for deletion, reordering, truncation, and mutation.
+- Export/import smoke for archived evidence bundles.
+
+**STOP:** pentest audit-chain bypass, signing-key handling, evidence export
+redaction, replay correctness, and checkpoint rollback. Release `1.5.0`.
+
+## 2.0.0 - Sandboxed Extension Platform
+
+Goal: make Lykilheim a secure extension platform, not only a vault server.
+
+Scope:
+
+- Promote capability-based Wasm adapters/plugins from preview to stable if the
+  sandbox model passes review.
+- Require signed plugin manifests, explicit host-call capabilities, bounded CPU
+  fuel, bounded memory, no ambient filesystem access, and network allowlists.
+- Support third-party auth, secret, database, cloud, and notification adapters
+  through the stable plugin contract.
+- Add plugin conformance certification using the `1.3.0` adapter framework.
+- Add plugin provenance, SBOM, revocation, pinning, upgrade, and rollback
+  workflows.
+- Revisit API, storage, plugin ABI, and policy compatibility as a major-version
+  boundary.
+
+Tests and scripts:
+
+- Wasm sandbox escape regression tests.
+- Fuel, memory, filesystem, and network capability tests.
+- Plugin signing/provenance tests.
+- Plugin upgrade and rollback tests.
+- Third-party adapter conformance tests.
+
+**STOP:** independent sandbox review, supply-chain review, plugin ABI freeze,
+major-version migration review, and full release pentest. Release `2.0.0`.

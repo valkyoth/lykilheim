@@ -16,3 +16,7 @@ The Vault/OpenBao coverage inventory lives in
 [docs/feature-parity.md](docs/feature-parity.md).
 
 Planned release notes live in [release-notes](release-notes/).
+
+Post-`1.0.0` releases continue the plan with operator intelligence, leak
+response, adapter certification, human approval, tamper-evident operations, and
+a `2.0.0` sandboxed extension platform.
