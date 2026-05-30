@@ -30,8 +30,8 @@ jobs:
 
       - name: Install security tools
         run: |
-          cargo install --locked cargo-deny
-          cargo install --locked cargo-audit
+          cargo install --locked cargo-deny@0.19.8
+          cargo install --locked cargo-audit@0.22.1
 
       - name: Run project checks
         run: scripts/checks.sh

@@ -43,9 +43,12 @@ async fn main() -> Result<()> {
     let app = api::router(api::AppState::from_config(config));
     let listener = TcpListener::bind(listen).await?;
     info!(%listen, "starting lykilheim");
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown_signal())
+    .await?;
     Ok(())
 }
 

@@ -1,14 +1,16 @@
 //! HTTP API shape for the foundation release.
 
 use std::{
+    collections::HashMap,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::{Arc, Mutex},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 
 use axum::{
     Json, Router,
     body::{Body, Bytes},
-    extract::{Request, State},
+    extract::{ConnectInfo, Request, State},
     http::{HeaderValue, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
@@ -23,7 +25,9 @@ use crate::{
     error::{Error, ErrorBody},
 };
 
-const REQUESTS_PER_SECOND: u32 = 100;
+const REQUESTS_PER_SECOND: f64 = 100.0;
+const RATE_LIMIT_CAPACITY: f64 = 100.0;
+const RATE_LIMIT_STALE_AFTER: Duration = Duration::from_secs(60);
 
 /// Shared HTTP API state.
 #[derive(Debug, Clone)]
@@ -36,13 +40,13 @@ pub struct AppState {
 
 #[derive(Debug, Default)]
 struct RateLimitState {
-    window: Mutex<RateLimitWindow>,
+    buckets: Mutex<HashMap<IpAddr, TokenBucket>>,
 }
 
-#[derive(Debug, Default)]
-struct RateLimitWindow {
-    epoch_second: u64,
-    requests: u32,
+#[derive(Debug)]
+struct TokenBucket {
+    tokens: f64,
+    last_refill: Instant,
 }
 
 impl AppState {
@@ -104,9 +108,17 @@ async fn enforce_rate_limit(
     request: Request<Body>,
     next: Next,
 ) -> Response {
-    if !state.rate_limit.allow_one_request() {
+    let ip = request
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map_or(IpAddr::V4(Ipv4Addr::LOCALHOST), |connect_info| {
+            connect_info.0.ip()
+        });
+
+    if !state.rate_limit.allow_one_request(ip) {
         return (
             StatusCode::TOO_MANY_REQUESTS,
+            [(header::RETRY_AFTER, HeaderValue::from_static("1"))],
             Json(ErrorBody {
                 code: "rate_limited",
                 message: "too many requests".to_owned(),
@@ -119,24 +131,40 @@ async fn enforce_rate_limit(
 }
 
 impl RateLimitState {
-    fn allow_one_request(&self) -> bool {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |duration| duration.as_secs());
-        let Ok(mut window) = self.window.lock() else {
+    fn allow_one_request(&self, ip: IpAddr) -> bool {
+        let now = Instant::now();
+        let Ok(mut buckets) = self.buckets.lock() else {
             return false;
         };
 
-        if window.epoch_second != now {
-            window.epoch_second = now;
-            window.requests = 0;
-        }
+        buckets
+            .retain(|_, bucket| now.duration_since(bucket.last_refill) <= RATE_LIMIT_STALE_AFTER);
 
-        if window.requests >= REQUESTS_PER_SECOND {
+        buckets
+            .entry(ip)
+            .or_insert_with(|| TokenBucket::new(now))
+            .allow(now)
+    }
+}
+
+impl TokenBucket {
+    fn new(now: Instant) -> Self {
+        Self {
+            tokens: RATE_LIMIT_CAPACITY,
+            last_refill: now,
+        }
+    }
+
+    fn allow(&mut self, now: Instant) -> bool {
+        let elapsed = now.duration_since(self.last_refill).as_secs_f64();
+        self.tokens = (self.tokens + elapsed * REQUESTS_PER_SECOND).min(RATE_LIMIT_CAPACITY);
+        self.last_refill = now;
+
+        if self.tokens < 1.0 {
             return false;
         }
 
-        window.requests += 1;
+        self.tokens -= 1.0;
         true
     }
 }
@@ -272,6 +300,26 @@ mod tests {
         let response = router(AppState::foundation()).oneshot(request).await?;
 
         assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rate_limit_returns_retry_after() -> Result<(), Box<dyn std::error::Error>> {
+        let app = router(AppState::foundation());
+        let mut response = app
+            .clone()
+            .oneshot(request("GET", "/v1/sys/health")?)
+            .await?;
+
+        for _ in 0..100 {
+            response = app
+                .clone()
+                .oneshot(request("GET", "/v1/sys/health")?)
+                .await?;
+        }
+
+        assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(response_header(&response, "retry-after"), Some("1"));
         Ok(())
     }
 

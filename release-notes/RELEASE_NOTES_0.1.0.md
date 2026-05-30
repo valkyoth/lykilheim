@@ -40,9 +40,10 @@ Planned stable preview scope:
   advanced CodeQL workflow.
 - Pentest follow-up tightened the foundation API and release process before
   tag: zeroizing crypto interface contracts, sanitized unimplemented errors,
-  explicit request body limits, baseline security headers, rate limiting,
-  stricter storage-key validation, pinned container base images, pinned checkout
-  action SHAs, safer smoke-test temporary files, and required local security
+  explicit request body limits, baseline security headers, per-IP token-bucket
+  rate limiting with `Retry-After`, stricter storage-key validation, pinned
+  container base images, pinned checkout action SHAs, pinned CI security tool
+  versions, safer smoke-test temporary files, and required local security
   tooling.
 
 ## Documentation
@@ -79,7 +80,10 @@ Release evidence to record immediately before publishing:
 
 - `zmij 1.0.21` was reviewed after pentest flagged it as unfamiliar. It is a
   legitimate crates.io dependency used by `serde_json 1.0.150`; repository:
-  <https://github.com/dtolnay/zmij>. No exception is required.
+  <https://github.com/dtolnay/zmij>. `cargo owner --list zmij` reports
+  `dtolnay (David Tolnay)`, `cargo owner --list serde_core` reports
+  `dtolnay (David Tolnay)` and `github:serde-rs:publish`, and
+  `cargo verify-project` succeeds. No exception is required.
 
 ## Breaking Changes
 
