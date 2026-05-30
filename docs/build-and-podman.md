@@ -26,3 +26,9 @@ The image runs as `65532:65532` and exposes port `8200`. The explicit listen
 override is required because the local binary defaults to loopback for safe
 development. Future releases will add state, audit, and configuration volume
 guidance as soon as persistent storage exists.
+
+Run the reusable `0.1.0` Podman smoke:
+
+```bash
+scripts/podman_smoke_0_1.sh
+```

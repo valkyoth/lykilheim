@@ -53,12 +53,13 @@ Documentation required for this release:
 
 Release evidence to record immediately before publishing:
 
-- Gate command: `scripts/checks.sh`
+- Gate command: `scripts/release_0_1_gate.sh`
 - Gate report directory: TBD
 - Result: TBD
-- `cargo audit` result: TBD
-- `cargo deny check` result: TBD
+- `cargo audit` RustSec advisory result: TBD
+- `cargo deny check bans licenses sources` result: TBD
 - API smoke result: TBD
+- Rootless Podman release gate: TBD
 - Cargo lockfile result: TBD
 - Feature-parity audit review: TBD
 - Documentation link check: TBD

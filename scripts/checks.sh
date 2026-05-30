@@ -9,14 +9,15 @@ if [ -f Cargo.toml ]; then
     cargo clippy --all-targets -- -D warnings
     cargo test
 
-    if cargo deny --version >/dev/null 2>&1; then
-        cargo deny check
+    if cargo deny --help >/dev/null 2>&1; then
+        cargo deny check bans licenses sources
     else
         echo "cargo-deny not installed; skipping cargo deny check for this bootstrap tree."
     fi
 
-    if cargo audit --version >/dev/null 2>&1; then
-        cargo audit
+    # RustSec advisories are checked by cargo-audit so its database can stay under target/.
+    if cargo audit --help >/dev/null 2>&1; then
+        cargo audit --db "${CARGO_AUDIT_DB:-target/advisory-db}"
     else
         echo "cargo-audit not installed; skipping cargo audit for this bootstrap tree."
     fi

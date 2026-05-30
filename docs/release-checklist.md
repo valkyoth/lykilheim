@@ -5,13 +5,13 @@ Every release ends with a STOP gate before tagging.
 ## Local Gate
 
 ```bash
-scripts/checks.sh
+scripts/release_0_1_gate.sh
 ```
 
 Once release artifacts exist, also record:
 
-- `cargo audit` result;
-- `cargo deny check` result;
+- `cargo audit` RustSec advisory result;
+- `cargo deny check bans licenses sources` result;
 - SBOM checksums;
 - source archive checksums;
 - binary checksums;
@@ -21,6 +21,9 @@ Once release artifacts exist, also record:
 
 ## 0.1.0 STOP Gate
 
+- `scripts/release_0_1_gate.sh` passed.
+- `LYKILHEIM_RELEASE_PODMAN=1 scripts/release_0_1_gate.sh` passed on a host
+  with rootless Podman.
 - Rust crate scaffold reviewed.
 - API shape reviewed against `docs/api-reference.md`.
 - Threat model reviewed against `docs/security-model.md`.

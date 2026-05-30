@@ -221,6 +221,13 @@ Before publishing or merging security-sensitive changes:
 scripts/checks.sh
 ```
 
+Before cutting the `0.1.0` release candidate:
+
+```bash
+scripts/release_0_1_gate.sh
+LYKILHEIM_RELEASE_PODMAN=1 scripts/release_0_1_gate.sh
+```
+
 See [SECURITY.md](SECURITY.md) for vulnerability reporting and release
 supply-chain expectations.
 

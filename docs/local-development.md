@@ -12,6 +12,18 @@ Run the full local check gate:
 scripts/checks.sh
 ```
 
+Run the `0.1.0` release gate without Podman:
+
+```bash
+scripts/release_0_1_gate.sh
+```
+
+Run the same gate with rootless Podman smoke enabled:
+
+```bash
+LYKILHEIM_RELEASE_PODMAN=1 scripts/release_0_1_gate.sh
+```
+
 Run the server locally:
 
 ```bash
@@ -23,6 +35,13 @@ Check the API:
 ```bash
 curl -s http://127.0.0.1:8200/v1/sys/health
 curl -s http://127.0.0.1:8200/v1/sys/version
+```
+
+The reusable API smoke runs the same foundation checks on an ephemeral local
+port:
+
+```bash
+scripts/smoke_api_foundation.sh
 ```
 
 Validate configuration without starting the server:
