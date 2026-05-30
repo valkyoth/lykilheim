@@ -84,6 +84,8 @@ Good pull requests are small enough to review and include:
 - a clear summary;
 - tests for behavior changes;
 - docs or examples when user-facing behavior changes;
+- practical documentation for every new feature, endpoint, config key,
+  deployment mode, and security-sensitive behavior;
 - security notes for risky areas.
 
 Large features should start with a roadmap or design-doc update before code.

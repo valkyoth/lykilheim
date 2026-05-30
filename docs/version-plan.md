@@ -14,6 +14,9 @@ starts.
 - API model: fully API-driven; CLI wrappers may exist only as API clients.
 - Code layout: split Rust modules by ownership boundary; do not grow one large
   `.rs` file.
+- Documentation: every user-facing feature, configuration surface, API endpoint,
+  deployment path, security model, and release process must be documented to the
+  same practical standard as Fluxheim before the feature is considered done.
 - Security posture: fail closed by default, minimize external requirements, use
   zeroization for plaintext secret material, and keep experimental features
   explicitly gated.
@@ -33,6 +36,8 @@ Every release candidate must pass:
 - `cargo deny check` and `cargo audit` once dependency policy exists.
 - Rootless Podman smoke tests once containers exist.
 - API compatibility smoke tests for every stable endpoint in that version.
+- Documentation updates for every changed feature, endpoint, config key,
+  container path, and operator workflow.
 - SBOM generation once binary release artifacts exist.
 
 Every version ends with:
@@ -54,16 +59,20 @@ Scope:
   clippy policy.
 - Add `Containerfile` and `containers/Containerfile.wolfi` placeholders that
   build a non-root health-check binary once the crate exists.
-- Define the public HTTP API shape for init, seal status, health, and version.
+- Define the public HTTP API shape for init, seal status, health, and version,
+  with request, response, error, and `curl` examples for every endpoint.
 - Define the threat model for sealed state, unsealed state, audit failure,
   storage compromise, token compromise, and plugin compromise.
-- Add release metadata validation and a minimal release checklist.
+- Add release metadata validation, a minimal release checklist, and an initial
+  documentation index for architecture, API, local development, release process,
+  security model, and container plans.
 
 Tests and scripts:
 
 - Unit tests for config parsing and error serialization.
 - API smoke for health and version endpoints.
 - CI gate for format, clippy, tests, audit, deny, and metadata.
+- Documentation link and stale-example checks once the docs tree exists.
 
 **STOP:** pentest the empty API surface, dependency policy, CI permissions,
 container user model, and release process. Release `0.1.0`.
@@ -133,6 +142,8 @@ Scope:
 - Add initial namespace model, even if single namespace is the only supported
   production mode.
 - Add API documentation examples using `curl`.
+- Add operator documentation for token lifecycle, KV v2 semantics, and common
+  automation workflows.
 
 Tests and scripts:
 
@@ -205,6 +216,8 @@ Scope:
 - Add systemd/user service documentation for rootless Podman.
 - Add backup/restore API for encrypted snapshots.
 - Add metrics and readiness endpoints that never expose secret material.
+- Add build-and-podman documentation covering standalone binary execution,
+  rootless Podman, Wolfi images, volume ownership, and upgrade flow.
 
 Tests and scripts:
 
@@ -276,6 +289,8 @@ Scope:
 - Add compatibility policy for API, storage format, audit format, and plugin
   ABI.
 - Add migration framework for storage and policy data.
+- Add docs for every stable/beta/experimental boundary so operators can tell
+  what is safe to run in production.
 
 Tests and scripts:
 
@@ -303,6 +318,10 @@ Required stable scope:
 - AppRole and userpass baseline auth.
 - Documented threat model, operator guide, API reference, release checklist,
   recovery runbook, and security disclosure process.
+- Complete documentation set for installation, configuration, API usage,
+  security model, storage, audit, auth, policies, tokens, leases, KV v2,
+  transit, containers, backup/restore, upgrades, troubleshooting, and release
+  verification.
 
 Explicitly not required for 1.0 stable unless completed and pentested earlier:
 

@@ -7,3 +7,7 @@ security gates before each release.
 
 Current status: planning/bootstrap. Start with
 [docs/version-plan.md](docs/version-plan.md).
+
+Documentation is part of the definition of done. User-facing features,
+configuration, APIs, deployment paths, and security behavior should ship with
+practical docs and examples, following the standard set by Fluxheim.

@@ -17,6 +17,8 @@ Describe what changed and why.
 
 - [ ] I kept the change scoped to Lykilheim's planned architecture.
 - [ ] I updated docs, examples, or roadmap entries when behavior changed.
+- [ ] I documented every new feature, endpoint, config key, deployment mode, or
+      security-sensitive behavior clearly enough for operators to use it.
 - [ ] I updated `CHANGELOG.md` for release-relevant changes.
 - [ ] I added or updated tests for behavior changes.
 - [ ] I ran `cargo fmt --all --check`.
