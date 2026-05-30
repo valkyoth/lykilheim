@@ -287,8 +287,9 @@ Scope:
 - Define `SecretEngine` and `AuthEngine` host traits.
 - Add native development dynamic secrets engine for PostgreSQL or a fake SQL
   target used in tests.
-- Add a documented dynamic-engine parity backlog for database, cloud,
-  Kubernetes, LDAP, RabbitMQ/service, SSH, and TOTP engines.
+- Add a documented dynamic-engine and adapter backlog for PostgreSQL,
+  MySQL/MariaDB, SurrealDB, MongoDB, Redis/Valkey, database, cloud, Kubernetes,
+  LDAP, RabbitMQ/service, SSH, and TOTP engines.
 - Add Wasmtime plugin prototype with fuel limits, memory limits, no ambient
   filesystem access, and explicit outbound capability injection.
 - Add plugin signing/verification design.
@@ -318,7 +319,9 @@ Scope:
   ABI.
 - Add migration framework for storage and policy data.
 - Add post-1.0 parity designs for JWT/OIDC, Kubernetes, LDAP, TLS certificate,
-  Kerberos, RADIUS, GitHub, cloud auth, MFA, control groups, password policies,
+  Kerberos, RADIUS, GitHub, cloud auth, public cloud adapters including AWS,
+  Azure, GCP, Hetzner, and DigitalOcean where provider APIs allow safe
+  credential lifecycle management, MFA, control groups, password policies,
   Sentinel/EGP/RGP-equivalent policy, quotas, KMIP, Transform, secret sync,
   auto-unseal, and agent/proxy integrations.
 - Add docs for every stable/beta/experimental boundary so operators can tell

@@ -19,7 +19,8 @@ Planned stable preview scope:
 - `SecretEngine` and `AuthEngine` host traits;
 - native development dynamic secrets engine for PostgreSQL or a fake SQL target
   used in tests;
-- documented dynamic-engine parity backlog for database, cloud, Kubernetes,
+- documented dynamic-engine and adapter parity backlog for PostgreSQL,
+  MySQL/MariaDB, SurrealDB, MongoDB, Redis/Valkey, cloud providers, Kubernetes,
   LDAP, RabbitMQ/service, SSH, and TOTP engines;
 - Wasmtime plugin prototype with fuel limits, memory limits, no ambient
   filesystem access, and explicit outbound capability injection;
@@ -39,7 +40,7 @@ Documentation required for this release:
 
 - engine trait overview;
 - dynamic secrets lifecycle guide;
-- dynamic-engine parity backlog;
+- dynamic-engine and adapter parity backlog;
 - plugin capability model;
 - Wasmtime resource limit behavior;
 - plugin signing design;

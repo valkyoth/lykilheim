@@ -21,9 +21,9 @@ Planned stable preview scope:
 - documented stable, beta, experimental, and research boundaries;
 - compatibility policy for API, storage format, audit format, and plugin ABI;
 - migration framework for storage and policy data;
-- post-`1.0.0` parity designs for auth methods, secrets engines, system backend
-  areas, enterprise-style governance, secret sync, auto-unseal, and
-  agent/proxy integrations.
+- post-`1.0.0` parity designs for auth methods, secrets engines, adapter
+  families, system backend areas, enterprise-style governance, secret sync,
+  auto-unseal, and agent/proxy integrations.
 
 ## Highlights
 
@@ -38,7 +38,7 @@ Documentation required for this release:
 
 - feature status matrix for stable, beta, experimental, and research work;
 - compatibility policy;
-- post-`1.0.0` parity roadmap;
+- post-`1.0.0` parity and adapter roadmap;
 - migration guide;
 - advanced security design notes and non-claims;
 - operator guidance for disabling research features in production.

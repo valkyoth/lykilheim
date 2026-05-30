@@ -127,6 +127,7 @@ Reference URLs checked on 2026-05-30:
 | SSH | `Post-1.0` | OTP and SSH CA signing with user/host cert roles. |
 | TOTP | `Post-1.0` | TOTP generation/validation engine. |
 | Database | `Post-1.0` | PostgreSQL first, then MySQL/MariaDB, MSSQL, MongoDB, Oracle, and other adapters by demand. |
+| SurrealDB | `Post-1.0` | Differentiating adapter for dynamic system users, static password rotation, and later record-access/JWT helpers after SurrealDB auth semantics are tested. |
 | Cloud dynamic secrets | `Post-1.0` | AWS, Azure, GCP, and other providers after dependency and secret-zero review. |
 | Kubernetes secrets engine | `Post-1.0` | Service-account/token workflows distinct from Kubernetes auth. |
 | LDAP secrets engine | `Post-1.0` | Credential management distinct from LDAP auth. |
@@ -136,6 +137,36 @@ Reference URLs checked on 2026-05-30:
 | Key management/TDE | `Post-1.0` | KMS-provider key management and transparent data encryption compatibility if demand exists. |
 | Identity engine | `1.0` | Entities/groups as first-class internal engine. |
 | Plugin engines | `Preview` | Native trait first; Wasmtime sandbox experimental until reviewed. |
+
+## Adapter Roadmap
+
+Adapters are provider-specific implementations behind a common engine trait.
+Early adapters should be compiled into the binary behind explicit Cargo
+features. Later, the same contracts may be exposed through sandboxed Wasm
+plugins for third-party providers.
+
+| Adapter family | Initial targets | Notes |
+| --- | --- | --- |
+| SQL databases | PostgreSQL, MySQL, MariaDB | Closest to OpenBao/Vault database engine semantics: dynamic users, static roles, root rotation, revocation statements. |
+| Document databases | MongoDB | Dynamic users and role grants; requires careful revocation and TTL testing. |
+| Multi-model databases | SurrealDB | Differentiator; system-user rotation is closer to database engines, record-access/JWT support is a separate app-auth design. |
+| Cache/key-value services | Redis, Valkey | User/ACL creation and rotation where server version supports it; otherwise static credential rotation only. |
+| Message brokers | RabbitMQ | Dynamic users, vhosts, tags, permissions, and revocation. |
+| Public cloud providers | AWS, Azure, GCP | Identity and access-key lifecycle where provider APIs support short-lived or rotated credentials. |
+| European/cloud infrastructure providers | Hetzner, DigitalOcean | API-token or project credential lifecycle where provider APIs support creation, scoping, and revocation. |
+| Extensible providers | Custom Wasm adapters | Only after the Wasm capability model, signing, resource limits, and network allowlists pass review. |
+
+Every adapter must document:
+
+- exact upstream API calls or statements used for create, renew, revoke, and
+  rotate;
+- minimum privileges needed by the Lykilheim management credential;
+- lease and revocation semantics;
+- whether static roles, dynamic roles, root rotation, and username customization
+  are supported;
+- audit fields and redaction behavior;
+- failure behavior when the upstream provider is unavailable;
+- rootless Podman smoke coverage where the provider can run locally.
 
 ## Replication, HA, And Multi-Cluster
 
