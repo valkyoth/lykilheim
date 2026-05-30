@@ -24,6 +24,10 @@ Run the same gate with rootless Podman smoke enabled:
 LYKILHEIM_RELEASE_PODMAN=1 scripts/release_0_1_gate.sh
 ```
 
+The release gate writes evidence under `target/release-evidence/0.1.0/`.
+Review `docs/pentest-0.1.0.md` before freezing the release candidate for the
+focused pentest.
+
 Run the server locally:
 
 ```bash

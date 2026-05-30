@@ -12,4 +12,5 @@ else
     echo "release 0.1 gate: set LYKILHEIM_RELEASE_PODMAN=1 to run rootless Podman smoke"
 fi
 
+scripts/release_evidence_0_1.sh
 echo "release 0.1 gate: ok"

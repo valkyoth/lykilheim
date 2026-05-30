@@ -16,6 +16,7 @@ Once release artifacts exist, also record:
 - source archive checksums;
 - binary checksums;
 - container digests;
+- pentest handoff and findings summary;
 - signed tag verification;
 - release-note evidence fields.
 
@@ -30,4 +31,5 @@ Once release artifacts exist, also record:
 - Dependency policy reviewed.
 - CI permissions reviewed.
 - Container user model reviewed.
+- `docs/pentest-0.1.0.md` reviewed and used for the focused pentest.
 - `release-notes/RELEASE_NOTES_0.1.0.md` evidence filled before tag.

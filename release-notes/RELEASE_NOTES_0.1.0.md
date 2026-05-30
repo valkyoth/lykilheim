@@ -27,6 +27,8 @@ Planned stable preview scope:
 - feature-parity audit that classifies Vault/OpenBao features as `1.0`,
   `Preview`, `Post-1.0`, `Research`, or `Different`;
 - release metadata validation and release checklist;
+- release evidence generation under `target/release-evidence/0.1.0/`;
+- focused pentest handoff for the `0.1.0` STOP gate;
 - initial documentation index for architecture, API, local development, release
   process, security model, and container plans.
 
@@ -47,14 +49,15 @@ Documentation required for this release:
 - threat model;
 - feature-parity audit;
 - release checklist;
-- container plan.
+- container plan;
+- pentest handoff.
 
 ## Security And Stability Gate
 
 Release evidence to record immediately before publishing:
 
 - Gate command: `scripts/release_0_1_gate.sh`
-- Gate report directory: TBD
+- Gate report directory: `target/release-evidence/0.1.0/`
 - Result: TBD
 - `cargo audit` RustSec advisory result: TBD
 - `cargo deny check bans licenses sources` result: TBD
@@ -64,6 +67,7 @@ Release evidence to record immediately before publishing:
 - Feature-parity audit review: TBD
 - Documentation link check: TBD
 - Podman smoke result: TBD, or not applicable before containers
+- Focused pentest result: TBD before tag
 
 ## Reviewed Advisory Exceptions
 

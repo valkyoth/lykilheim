@@ -228,6 +228,10 @@ scripts/release_0_1_gate.sh
 LYKILHEIM_RELEASE_PODMAN=1 scripts/release_0_1_gate.sh
 ```
 
+The gate writes evidence to `target/release-evidence/0.1.0/`. The focused
+pentest scope is documented in
+[docs/pentest-0.1.0.md](docs/pentest-0.1.0.md).
+
 See [SECURITY.md](SECURITY.md) for vulnerability reporting and release
 supply-chain expectations.
 
