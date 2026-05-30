@@ -20,7 +20,10 @@ Planned stable preview scope:
   transport, ZKP authentication, Merkle audit anchoring, and eBPF audit export;
 - documented stable, beta, experimental, and research boundaries;
 - compatibility policy for API, storage format, audit format, and plugin ABI;
-- migration framework for storage and policy data.
+- migration framework for storage and policy data;
+- post-`1.0.0` parity designs for auth methods, secrets engines, system backend
+  areas, enterprise-style governance, secret sync, auto-unseal, and
+  agent/proxy integrations.
 
 ## Highlights
 
@@ -35,6 +38,7 @@ Documentation required for this release:
 
 - feature status matrix for stable, beta, experimental, and research work;
 - compatibility policy;
+- post-`1.0.0` parity roadmap;
 - migration guide;
 - advanced security design notes and non-claims;
 - operator guidance for disabling research features in production.
@@ -52,6 +56,7 @@ Release evidence to record immediately before publishing:
 - Audit hash-chain verification tests: TBD
 - Migration round-trip tests: TBD
 - 1.0 compatibility review: TBD
+- Post-1.0 parity roadmap review: TBD
 
 ## Reviewed Advisory Exceptions
 

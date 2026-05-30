@@ -20,8 +20,10 @@ Planned stable preview scope:
 - axum API routing under versioned paths;
 - request IDs, structured errors, body limits, and method/path allowlists;
 - mount table and radix or prefix routing for auth and secrets engines;
+- mount lifecycle APIs for enable, disable, tune, and remount;
 - fail-closed audit interface with at least one durable local audit device;
 - deterministic policy data model and path capability checks;
+- response wrapping and cubbyhole design for bootstrap and SecretID workflows;
 - token metadata structs without full production token issuance.
 
 ## Highlights
@@ -38,6 +40,7 @@ Documentation required for this release:
 - structured error format;
 - audit device configuration and failure semantics;
 - policy model with allow, deny, wildcard, and namespace examples;
+- mount lifecycle and response wrapping API examples;
 - security notes for log redaction.
 
 ## Security And Stability Gate
@@ -52,6 +55,8 @@ Release evidence to record immediately before publishing:
 - API routing tests: TBD
 - Audit fail-closed tests: TBD
 - Policy matrix tests: TBD
+- Mount lifecycle tests: TBD
+- Response wrapping tests: TBD
 - Log redaction review: TBD
 
 ## Reviewed Advisory Exceptions

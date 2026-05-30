@@ -16,11 +16,13 @@ leases, and KV v2 semantics.
 
 Planned stable preview scope:
 
-- token creation, renewal, revocation, TTL, parent/child revocation, and
-  accessor lookup;
+- token creation, renewal, revocation, TTL, parent/child revocation, accessor
+  lookup, child/orphan/periodic token modes, and capability checks;
 - bounded expiration manager background task;
 - KV v2 versioning, soft delete, undelete, destroy, metadata, check-and-set,
   and max versions;
+- cubbyhole per-token private storage;
+- identity entities, aliases, groups, metadata, and policy attachment;
 - initial namespace model, even if production remains single-namespace;
 - API examples for init, unseal, token login, KV write, KV read, KV list, and
   KV delete.
@@ -36,6 +38,7 @@ Planned stable preview scope:
 Documentation required for this release:
 
 - token lifecycle guide;
+- identity and cubbyhole guides;
 - lease and expiration behavior;
 - KV v2 API reference with `curl` examples;
 - namespace model and current limits;
@@ -51,6 +54,7 @@ Release evidence to record immediately before publishing:
 - `cargo audit` result: TBD
 - `cargo deny check` result: TBD
 - Token lifecycle tests: TBD
+- Identity and cubbyhole isolation tests: TBD
 - Lease cascade tests: TBD
 - KV v2 compatibility tests: TBD
 - API smoke result: TBD

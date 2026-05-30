@@ -12,4 +12,7 @@ Documentation is part of the definition of done. User-facing features,
 configuration, APIs, deployment paths, and security behavior should ship with
 practical docs and examples, following the standard set by Fluxheim.
 
+The Vault/OpenBao coverage inventory lives in
+[docs/feature-parity.md](docs/feature-parity.md).
+
 Planned release notes live in [release-notes](release-notes/).

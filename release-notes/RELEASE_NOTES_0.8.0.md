@@ -22,7 +22,9 @@ Planned stable preview scope:
 - write forwarding to the leader;
 - split-brain rejection behavior;
 - encrypted snapshots and restore across nodes;
-- disaster recovery runbooks.
+- disaster recovery runbooks;
+- documented boundaries for performance standby, read replicas, performance
+  replication, and replication filters.
 
 ## Highlights
 
@@ -39,7 +41,8 @@ Documentation required for this release:
 - join/remove API reference;
 - leader forwarding behavior;
 - network partition behavior;
-- encrypted snapshot and disaster recovery runbooks.
+- encrypted snapshot and disaster recovery runbooks;
+- replication boundary and non-claim documentation.
 
 ## Security And Stability Gate
 
@@ -54,6 +57,7 @@ Release evidence to record immediately before publishing:
 - Leader failover tests: TBD
 - Network partition tests: TBD
 - Snapshot and membership-change tests: TBD
+- Replication boundary review: TBD
 
 ## Reviewed Advisory Exceptions
 

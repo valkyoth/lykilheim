@@ -26,6 +26,26 @@ if ! grep -q 'rootless Podman on Wolfi' docs/version-plan.md; then
     exit 1
 fi
 
+if [ ! -f docs/feature-parity.md ]; then
+    echo "release metadata: missing docs/feature-parity.md" >&2
+    exit 1
+fi
+
+for parity_heading in \
+    "Core Request Flow" \
+    "Seal, Key Lifecycle, And Storage" \
+    "Audit, Logs, Telemetry, And Operations" \
+    "Auth Methods" \
+    "Identity, Policies, And Governance" \
+    "Secrets Engines" \
+    "Replication, HA, And Multi-Cluster" \
+    "Client And Platform Integrations"; do
+    if ! grep -q "^## $parity_heading$" docs/feature-parity.md; then
+        echo "release metadata: feature parity audit missing $parity_heading" >&2
+        exit 1
+    fi
+done
+
 if ! grep -q '^## 1.0.0 - First Stable Release$' docs/version-plan.md; then
     echo "release metadata: version plan must include the 1.0.0 target" >&2
     exit 1

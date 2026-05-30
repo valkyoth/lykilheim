@@ -27,6 +27,10 @@ starts.
 - Dependency posture: use current crates at the time each implementation starts,
   record crate choices in release notes, and run `cargo update`, `cargo audit`,
   and `cargo deny check` before release.
+- Parity posture: keep [Vault And OpenBao Feature-Parity Audit](feature-parity.md)
+  current so every major Vault/OpenBao auth method, secrets engine, system
+  backend area, HA mode, and enterprise/open-source feature is implemented,
+  scheduled, explicitly deferred, or intentionally different.
 
 ## Version Gates
 
@@ -41,6 +45,8 @@ Every release candidate must pass:
 - API compatibility smoke tests for every stable endpoint in that version.
 - Documentation updates for every changed feature, endpoint, config key,
   container path, and operator workflow.
+- Feature-parity audit update for every newly implemented, deferred, or rejected
+  Vault/OpenBao behavior.
 - The matching `release-notes/RELEASE_NOTES_VERSION.md` file updated with final
   scope, known limits, gate results, checksums, and signatures.
 - SBOM generation once binary release artifacts exist.
@@ -68,6 +74,8 @@ Scope:
   with request, response, error, and `curl` examples for every endpoint.
 - Define the threat model for sealed state, unsealed state, audit failure,
   storage compromise, token compromise, and plugin compromise.
+- Maintain the feature-parity audit and classify every Vault/OpenBao feature as
+  `1.0`, `Preview`, `Post-1.0`, `Research`, or `Different`.
 - Add release metadata validation, a minimal release checklist, and an initial
   documentation index for architecture, API, local development, release process,
   security model, and container plans.
@@ -119,8 +127,12 @@ Scope:
 - Implement axum API routing under versioned paths.
 - Add request IDs, structured errors, body limits, and method/path allowlists.
 - Add mount table and radix/prefix routing for auth and secrets engines.
+- Add mount lifecycle APIs for enable, disable, tune, and remount, including
+  lease revocation behavior and mount conflict checks.
 - Add fail-closed audit interface with at least one durable local audit device.
 - Add policy data model and deterministic path capability checks.
+- Add response wrapping and cubbyhole design because AppRole, SecretID
+  delivery, and bootstrap workflows depend on them.
 - Add token metadata structs without full token issuance yet.
 
 Tests and scripts:
@@ -129,6 +141,9 @@ Tests and scripts:
   sealed/unsealed behavior.
 - Audit tests proving requests fail when all audit sinks fail.
 - Policy matrix tests for allow, deny, wildcard, namespace, and default deny.
+- Mount lifecycle tests for conflict detection, remount, tune, and revocation.
+- Response wrapping tests for lookup, rewrap, unwrap, TTL, and single-use
+  behavior.
 
 **STOP:** pentest request parsing, route normalization, audit bypass attempts,
 policy default-deny behavior, and log redaction. Release `0.3.0`.
@@ -140,10 +155,12 @@ Goal: provide useful static secret storage with tracked tokens and leases.
 Scope:
 
 - Implement token creation, renewal, revocation, TTL, parent/child revocation,
-  and accessor lookup.
+  accessor lookup, child/orphan/periodic token modes, and capability checks.
 - Add expiration manager as a bounded tokio background task.
 - Implement KV v2 with versioning, soft delete, undelete, destroy, metadata,
   check-and-set, and max versions.
+- Implement cubbyhole per-token private storage.
+- Implement identity entities, aliases, groups, metadata, and policy attachment.
 - Add initial namespace model, even if single namespace is the only supported
   production mode.
 - Add API documentation examples using `curl`.
@@ -153,6 +170,7 @@ Scope:
 Tests and scripts:
 
 - Token lifecycle tests with simulated time.
+- Identity and cubbyhole isolation tests.
 - Lease cascade tests.
 - KV v2 compatibility-style tests for version conflicts, delete/destroy,
   metadata, list behavior, and sealed storage.
@@ -192,10 +210,11 @@ Scope:
 
 - Implement transit key creation, encrypt, decrypt, rewrap, rotate, and key
   version controls.
-- Add signing and verification only with reviewed primitives selected at
-  implementation time.
+- Add signing, verification, HMAC, hashing, random bytes, datakey generation,
+  derived keys, and convergent-encryption decisions only with reviewed
+  primitives selected at implementation time.
 - Implement PKI root/intermediate CA issuance, CSR signing, CRL/OCSP planning,
-  and certificate role constraints.
+  ACME planning, issuer rotation, and certificate role constraints.
 - Add explicit FIPS/ISO19790 profile planning without claiming validation.
 
 Tests and scripts:
@@ -244,7 +263,9 @@ Scope:
 - Add node identity, peer TLS, join/remove APIs, and leadership status.
 - Forward writes to the leader and reject unsafe split-brain operations.
 - Add encrypted snapshots and restore across nodes.
-- Define disaster recovery runbooks.
+- Define disaster recovery, performance standby, read replica, and future
+  performance-replication boundaries, even where only DR runbooks ship in this
+  version.
 
 Tests and scripts:
 
@@ -266,6 +287,8 @@ Scope:
 - Define `SecretEngine` and `AuthEngine` host traits.
 - Add native development dynamic secrets engine for PostgreSQL or a fake SQL
   target used in tests.
+- Add a documented dynamic-engine parity backlog for database, cloud,
+  Kubernetes, LDAP, RabbitMQ/service, SSH, and TOTP engines.
 - Add Wasmtime plugin prototype with fuel limits, memory limits, no ambient
   filesystem access, and explicit outbound capability injection.
 - Add plugin signing/verification design.
@@ -294,6 +317,10 @@ Scope:
 - Add compatibility policy for API, storage format, audit format, and plugin
   ABI.
 - Add migration framework for storage and policy data.
+- Add post-1.0 parity designs for JWT/OIDC, Kubernetes, LDAP, TLS certificate,
+  Kerberos, RADIUS, GitHub, cloud auth, MFA, control groups, password policies,
+  Sentinel/EGP/RGP-equivalent policy, quotas, KMIP, Transform, secret sync,
+  auto-unseal, and agent/proxy integrations.
 - Add docs for every stable/beta/experimental boundary so operators can tell
   what is safe to run in production.
 
@@ -315,17 +342,21 @@ Goal: ship the smallest secure vault that is useful, documented, and stable.
 Required stable scope:
 
 - API-driven init, seal status, unseal, health, version, auth, policy, token,
-  KV v2, transit baseline, audit, storage, and backup/restore.
+  KV v2, cubbyhole, response wrapping, identity, transit baseline, audit,
+  storage, and backup/restore.
 - Standalone binary and rootless Wolfi container.
 - Fail-closed audit behavior.
 - Encrypted storage at rest behind the barrier.
 - Token TTL, leases, renewal, revocation, and cascade revocation.
 - AppRole and userpass baseline auth.
+- Rekey, root/recovery token generation, barrier key rotation, capabilities,
+  mount lifecycle, and namespace-base system behavior.
 - Documented threat model, operator guide, API reference, release checklist,
   recovery runbook, and security disclosure process.
 - Complete documentation set for installation, configuration, API usage,
-  security model, storage, audit, auth, policies, tokens, leases, KV v2,
-  transit, containers, backup/restore, upgrades, troubleshooting, and release
+  feature-parity status, security model, storage, audit, auth, identity,
+  policies, tokens, leases, KV v2, cubbyhole, response wrapping, transit,
+  containers, backup/restore, upgrades, troubleshooting, and release
   verification.
 
 Explicitly not required for 1.0 stable unless completed and pentested earlier:
@@ -335,6 +366,8 @@ Explicitly not required for 1.0 stable unless completed and pentested earlier:
 - Production PQC, ZKP, TEE, eBPF, or external Merkle anchoring.
 - Enterprise compatibility claims with Vault/OpenBao.
 - FIPS validation claims.
+- Full parity with every Vault/OpenBao auth method, secrets engine, enterprise
+  feature, and agent/operator integration.
 
 Release gate:
 

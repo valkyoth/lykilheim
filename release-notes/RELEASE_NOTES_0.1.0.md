@@ -24,6 +24,8 @@ Planned stable preview scope:
 - public HTTP API shape for init, seal status, health, and version;
 - threat model for sealed state, unsealed state, audit failure, storage
   compromise, token compromise, and plugin compromise;
+- feature-parity audit that classifies Vault/OpenBao features as `1.0`,
+  `Preview`, `Post-1.0`, `Research`, or `Different`;
 - release metadata validation and release checklist;
 - initial documentation index for architecture, API, local development, release
   process, security model, and container plans.
@@ -43,6 +45,7 @@ Documentation required for this release:
 - local development guide;
 - API endpoint drafts with request, response, error, and `curl` examples;
 - threat model;
+- feature-parity audit;
 - release checklist;
 - container plan.
 
@@ -56,6 +59,7 @@ Release evidence to record immediately before publishing:
 - `cargo audit` result: TBD, or not applicable before `Cargo.toml`
 - `cargo deny check` result: TBD, or not applicable before `deny.toml`
 - API smoke result: TBD
+- Feature-parity audit review: TBD
 - Documentation link check: TBD
 - Podman smoke result: TBD, or not applicable before containers
 

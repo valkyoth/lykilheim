@@ -18,10 +18,12 @@ Planned stable preview scope:
 
 - transit key creation, encrypt, decrypt, rewrap, rotate, and key version
   controls;
-- signing and verification only with reviewed primitives selected at
-  implementation time;
+- signing, verification, HMAC, hashing, random bytes, datakey generation,
+  derived-key, and convergent-encryption decisions only with reviewed
+  primitives selected at implementation time;
 - PKI root and intermediate CA issuance;
-- CSR signing, CRL/OCSP planning, and certificate role constraints;
+- CSR signing, CRL/OCSP planning, ACME planning, issuer rotation, and
+  certificate role constraints;
 - FIPS/ISO19790 profile planning without validation claims.
 
 ## Highlights
@@ -36,6 +38,7 @@ Documentation required for this release:
 
 - transit API reference with safe usage examples;
 - key rotation and rewrap guide;
+- HMAC, hash, random, datakey, derived-key, and convergent-encryption status;
 - PKI role and issuance guide;
 - certificate constraint examples;
 - explicit cryptographic non-claims, including no FIPS validation claim.
@@ -51,6 +54,7 @@ Release evidence to record immediately before publishing:
 - `cargo deny check` result: TBD
 - Transit known-answer tests: TBD
 - Transit negative tests: TBD
+- Transit HMAC/hash/random/datakey tests: TBD
 - PKI constraint tests: TBD
 - Cryptographic review result: TBD
 
