@@ -27,3 +27,14 @@ The planned request flow is:
 6. Storage operations cross the cryptographic barrier before reaching a backend.
 
 Only the first public system endpoints exist in `0.1.0`.
+
+## Platform Boundaries
+
+The standalone binary is designed to stay portable across Linux, macOS,
+Windows, and BSD-style Unix systems. Platform-specific behavior should live
+behind narrow modules rather than spreading `cfg` checks through API, storage,
+audit, or crypto code.
+
+The hardened Wolfi container is a Linux-only delivery target. Container
+requirements must not become requirements for running the standalone binary on
+macOS, Windows, or BSD.

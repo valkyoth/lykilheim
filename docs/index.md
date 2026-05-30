@@ -6,6 +6,7 @@ This is the documentation index for the `0.1.0` foundation release.
 - [API Reference](api-reference.md)
 - [Local Development](local-development.md)
 - [Security Model](security-model.md)
+- [Portability Policy](portability.md)
 - [Build And Podman](build-and-podman.md)
 - [Release Checklist](release-checklist.md)
 - [0.1.0 Pentest Handoff](pentest-0.1.0.md)

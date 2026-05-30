@@ -29,6 +29,8 @@ Planned stable preview scope:
 - release metadata validation and release checklist;
 - release evidence generation under `target/release-evidence/0.1.0/`;
 - focused pentest handoff for the `0.1.0` STOP gate;
+- portability policy for Linux, macOS, Windows, BSD-style Unix systems, and
+  Linux-only Wolfi containers;
 - initial documentation index for architecture, API, local development, release
   process, security model, and container plans.
 
@@ -57,6 +59,7 @@ Documentation required for this release:
 - feature-parity audit;
 - release checklist;
 - container plan;
+- portability policy;
 - pentest handoff.
 
 ## Security And Stability Gate

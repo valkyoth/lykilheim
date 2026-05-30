@@ -10,7 +10,10 @@ starts.
 - Project name: Lykilheim.
 - License: EUPL-1.2.
 - Toolchain: Rust 1.96.0, pinned in `rust-toolchain.toml`.
-- Delivery targets: standalone compiled binary and rootless Podman on Wolfi.
+- Delivery targets: portable standalone compiled binary and rootless Podman on Wolfi.
+- Portability posture: keep the standalone binary portable across Linux, macOS,
+  Windows, and BSD-style Unix systems; keep the hardened Wolfi container
+  Linux-only.
 - API model: fully API-driven; CLI wrappers may exist only as API clients.
 - Code layout: split Rust modules by ownership boundary; do not grow one large
   `.rs` file.
@@ -42,6 +45,9 @@ Every release candidate must pass:
 - `cargo test` once `Cargo.toml` exists.
 - `cargo deny check bans licenses sources` and `cargo audit` once dependency
   policy exists.
+- Cross-platform `cargo check` for Linux, macOS, and Windows once CI capacity is
+  available; BSD checks should be added through a suitable runner or cross
+  build path when practical.
 - Rootless Podman smoke tests once containers exist.
 - API compatibility smoke tests for every stable endpoint in that version.
 - Documentation updates for every changed feature, endpoint, config key,
@@ -80,6 +86,8 @@ Scope:
 - Add release metadata validation, a minimal release checklist, and an initial
   documentation index for architecture, API, local development, release process,
   security model, and container plans.
+- Add a portability policy for Linux, macOS, Windows, BSD-style Unix systems,
+  and Linux-only Wolfi containers.
 
 Tests and scripts:
 
@@ -87,6 +95,7 @@ Tests and scripts:
 - API smoke for health and version endpoints.
 - CI gate for format, clippy, tests, audit, deny, and metadata.
 - Documentation link and stale-example checks once the docs tree exists.
+- Portable design review for standalone binary boundaries.
 
 **STOP:** pentest the empty API surface, dependency policy, CI permissions,
 container user model, and release process. Release `0.1.0`.

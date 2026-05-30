@@ -94,6 +94,9 @@ Lykilheim is licensed under the European Union Public Licence 1.2.
   deployment paths, and security behavior are not done until they are documented.
 - **Rootless ready**: standalone binary and rootless Wolfi container operation
   are first-class release gates.
+- **Portable binary**: the standalone server should work on Linux, macOS,
+  Windows, and BSD-style Unix systems; the hardened Wolfi container remains
+  Linux-only.
 - **Parity-aware**: Vault/OpenBao features are tracked explicitly so missing
   behavior is scheduled, deferred, or intentionally different.
 - **Extensible later**: native adapters come first; sandboxed Wasm plugins are a
@@ -187,6 +190,7 @@ and local smoke coverage where practical.
 - [Release Checklist](docs/release-checklist.md)
 - [Feature-Parity Audit](docs/feature-parity.md)
 - [Security Model](docs/security-model.md)
+- [Portability Policy](docs/portability.md)
 - [Security Policy](SECURITY.md)
 - [Release Notes](release-notes)
 - [Contributing](.github/CONTRIBUTING.md)

@@ -3,6 +3,10 @@
 The `0.1.0` foundation provides container build placeholders for the future
 rootless Wolfi release gate.
 
+The standalone binary is intended to remain portable across Linux, macOS,
+Windows, and BSD-style Unix systems. The Wolfi container path is Linux-only and
+is the only container target for now.
+
 Build the local binary:
 
 ```bash
