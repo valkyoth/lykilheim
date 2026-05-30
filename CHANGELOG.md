@@ -17,3 +17,5 @@
   hosts with GitHub release checksum output.
 - Document native ARM release builds and add optional Rust target-triple support
   to the release-binary helper.
+- Enforce matching Git tags for official release-binary builds and use clean
+  version, OS-label, and architecture artifact names.

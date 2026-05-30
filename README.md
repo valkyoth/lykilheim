@@ -243,7 +243,9 @@ python3 scripts/build_release_binary.py linux --ref v0.1.0
 Use `macos`, `bsd`, or `windows` for the matching host. See
 [docs/release-binaries.md](docs/release-binaries.md). Native ARM hosts are
 supported; use `--target` only when the build host is prepared for an explicit
-Rust target triple.
+Rust target triple. Release artifacts are built only from a matching release
+tag and are named like `lykilheim-0.1.0-linux-x86_64.tar.gz`; use `--os-label`
+for variants such as `windows11` or `windowsserver2026`.
 
 The gate writes evidence to `target/release-evidence/0.1.0/`. The focused
 pentest scope is documented in

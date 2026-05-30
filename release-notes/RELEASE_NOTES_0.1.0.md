@@ -117,7 +117,9 @@ Record during the release:
 - Source archive checksum: record from the generated `v0.1.0` release asset.
 - Binary checksums: record per uploaded native binary artifact.
 - Native binary artifacts: build with `scripts/build_release_binary.py` on each
-  target OS that publishes an asset.
+  target OS that publishes an asset. Artifact names should use the package
+  version, OS label, and architecture, for example
+  `lykilheim-0.1.0-linux-x86_64.tar.gz`.
 - SBOM checksums: record from `scripts/generate-sbom.sh` output if SBOM files
   are published.
 - Container digests: record from `target/release-evidence/0.1.0/container-image.txt`

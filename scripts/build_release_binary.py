@@ -25,6 +25,7 @@ SUPPORTED_PLATFORMS = ("linux", "macos", "windows", "bsd")
 def main() -> int:
     args = parse_args()
     requested_platform = args.platform.lower()
+    os_label = normalize_label(args.os_label or requested_platform, "OS label")
     host_platform = detect_host_platform()
     if requested_platform != host_platform and not args.allow_platform_mismatch:
         fail(
@@ -45,10 +46,11 @@ def main() -> int:
         shutil.rmtree(clone_dir)
 
     run(["git", "clone", args.repo, str(clone_dir)])
-    if args.ref:
-        run(["git", "checkout", args.ref], cwd=clone_dir)
+    run(["git", "checkout", args.ref], cwd=clone_dir)
 
     commit = output(["git", "rev-parse", "HEAD"], cwd=clone_dir).strip()
+    version = cargo_version(clone_dir / "Cargo.toml")
+    tag = validate_release_tag(clone_dir, version, args.allow_untagged)
     ensure_rust_toolchain(clone_dir, args.install_prereqs, env)
     if args.target and args.install_prereqs and shutil.which("rustup") is not None:
         run(["rustup", "target", "add", args.target], env=env)
@@ -58,8 +60,8 @@ def main() -> int:
         build_command.extend(["--target", args.target])
     run(build_command, cwd=clone_dir, env=env)
 
-    package = package_release(clone_dir, out_dir, requested_platform, commit, args.target)
-    binary = binary_path(clone_dir, args.target)
+    package = package_release(clone_dir, out_dir, requested_platform, os_label, args.target)
+    binary = binary_path(clone_dir, requested_platform, args.target)
     package_sha = sha256_file(package)
     binary_sha = sha256_file(binary)
 
@@ -67,7 +69,9 @@ def main() -> int:
     print("release binary build: ok")
     print(f"repository: {args.repo}")
     print(f"commit: {commit}")
+    print(f"tag: {tag or 'untagged'}")
     print(f"platform: {requested_platform}")
+    print(f"os label: {os_label}")
     print(f"target: {args.target or native_target_label()}")
     print(f"artifact: {package}")
     print(f"artifact sha256: {package_sha}")
@@ -92,7 +96,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("platform", choices=SUPPORTED_PLATFORMS)
     parser.add_argument("--repo", default=DEFAULT_REPO, help=f"Git repository to clone. Default: {DEFAULT_REPO}")
-    parser.add_argument("--ref", help="Git tag, branch, or commit to check out before building.")
+    parser.add_argument(
+        "--ref",
+        required=True,
+        help="Git tag to check out before building. Release builds must use v<package version>.",
+    )
+    parser.add_argument(
+        "--os-label",
+        help=(
+            "Artifact OS label. Defaults to the platform argument. Useful for "
+            "variants such as windows11 or windowsserver2026."
+        ),
+    )
     parser.add_argument(
         "--target",
         help=(
@@ -123,6 +138,11 @@ def parse_args() -> argparse.Namespace:
         help="Allow the platform argument to differ from the detected host OS.",
     )
     parser.add_argument(
+        "--allow-untagged",
+        action="store_true",
+        help="Allow building a non-tagged ref. For local validation only, not release artifacts.",
+    )
+    parser.add_argument(
         "--keep-work",
         action="store_true",
         help="Keep the cloned build tree after a successful build.",
@@ -145,11 +165,24 @@ def detect_host_platform() -> str:
 
 def machine_label() -> str:
     machine = platform.machine().lower() or "unknown"
-    return re.sub(r"[^a-z0-9_]+", "-", machine)
+    return normalize_label(machine, "machine label")
 
 
 def native_target_label() -> str:
     return f"native-{machine_label()}"
+
+
+def normalize_label(value: str, description: str) -> str:
+    label = re.sub(r"[^a-z0-9_]+", "-", value.lower()).strip("-")
+    if not label:
+        fail(f"{description} cannot be empty")
+    return label
+
+
+def target_arch_label(target: str | None) -> str:
+    if not target:
+        return machine_label()
+    return normalize_label(target.split("-", maxsplit=1)[0], "target architecture")
 
 
 def ensure_prerequisites(install_prereqs: bool, env: dict[str, str]) -> None:
@@ -220,17 +253,43 @@ def rust_channel(path: Path) -> str:
     return match.group(1)
 
 
+def validate_release_tag(clone_dir: Path, version: str, allow_untagged: bool) -> str | None:
+    result = subprocess.run(
+        ["git", "describe", "--tags", "--exact-match", "HEAD"],
+        cwd=clone_dir,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if result.returncode != 0:
+        if allow_untagged:
+            return None
+        fail(
+            "release binary builds must check out an exact tag; "
+            "use --allow-untagged only for local validation"
+        )
+
+    tag = result.stdout.strip()
+    expected = f"v{version}"
+    if tag != expected:
+        fail(
+            f"checked-out tag {tag} does not match package version {version}; "
+            f"expected {expected}"
+        )
+    return tag
+
+
 def package_release(
     clone_dir: Path,
     out_dir: Path,
     requested_platform: str,
-    commit: str,
+    os_label: str,
     target: str | None,
 ) -> Path:
     version = cargo_version(clone_dir / "Cargo.toml")
-    arch = target or machine_label()
-    stem = f"lykilheim-{version}-{requested_platform}-{arch}-{commit[:12]}"
-    binary = binary_path(clone_dir, target)
+    arch = target_arch_label(target)
+    stem = f"lykilheim-{version}-{os_label}-{arch}"
+    binary = binary_path(clone_dir, requested_platform, target)
 
     if requested_platform == "windows":
         package = out_dir / f"{stem}.zip"
@@ -248,8 +307,9 @@ def package_release(
     return package
 
 
-def binary_path(clone_dir: Path, target: str | None) -> Path:
-    name = "lykilheim.exe" if platform.system().lower() == "windows" else "lykilheim"
+def binary_path(clone_dir: Path, requested_platform: str, target: str | None) -> Path:
+    is_windows = requested_platform == "windows" or bool(target and "windows" in target)
+    name = "lykilheim.exe" if is_windows else "lykilheim"
     if target:
         path = clone_dir / "target" / target / "release" / name
     else:
