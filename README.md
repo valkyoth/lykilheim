@@ -11,3 +11,5 @@ Current status: planning/bootstrap. Start with
 Documentation is part of the definition of done. User-facing features,
 configuration, APIs, deployment paths, and security behavior should ship with
 practical docs and examples, following the standard set by Fluxheim.
+
+Planned release notes live in [release-notes](release-notes/).

@@ -36,6 +36,26 @@ if ! grep -q 'STOP' docs/version-plan.md; then
     exit 1
 fi
 
+for version in 0.1.0 0.2.0 0.3.0 0.4.0 0.5.0 0.6.0 0.7.0 0.8.0 0.9.0 0.10.0 1.0.0; do
+    notes="release-notes/RELEASE_NOTES_${version}.md"
+    if [ ! -f "$notes" ]; then
+        echo "release metadata: missing $notes" >&2
+        exit 1
+    fi
+    if ! grep -q "Lykilheim ${version} Release Notes" "$notes"; then
+        echo "release metadata: $notes has the wrong title" >&2
+        exit 1
+    fi
+    if ! grep -q '## Security And Stability Gate' "$notes"; then
+        echo "release metadata: $notes must include a security gate section" >&2
+        exit 1
+    fi
+    if ! grep -q '## Checksums And Signatures' "$notes"; then
+        echo "release metadata: $notes must include checksums and signatures" >&2
+        exit 1
+    fi
+done
+
 if [ -f Cargo.toml ]; then
     if ! grep -q '^rust-version = "1.96"$' Cargo.toml; then
         echo "release metadata: Cargo.toml must declare rust-version = \"1.96\"" >&2

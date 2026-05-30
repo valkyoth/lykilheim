@@ -17,6 +17,9 @@ starts.
 - Documentation: every user-facing feature, configuration surface, API endpoint,
   deployment path, security model, and release process must be documented to the
   same practical standard as Fluxheim before the feature is considered done.
+- Release notes: every planned release must have a dedicated file under
+  `release-notes/` before implementation starts, and release evidence must be
+  filled in before tagging.
 - Security posture: fail closed by default, minimize external requirements, use
   zeroization for plaintext secret material, and keep experimental features
   explicitly gated.
@@ -38,6 +41,8 @@ Every release candidate must pass:
 - API compatibility smoke tests for every stable endpoint in that version.
 - Documentation updates for every changed feature, endpoint, config key,
   container path, and operator workflow.
+- The matching `release-notes/RELEASE_NOTES_VERSION.md` file updated with final
+  scope, known limits, gate results, checksums, and signatures.
 - SBOM generation once binary release artifacts exist.
 
 Every version ends with:
