@@ -15,3 +15,5 @@
   binaries, while keeping Wolfi containers Linux-only.
 - Add a native release-binary build helper for Linux, macOS, Windows, and BSD
   hosts with GitHub release checksum output.
+- Document native ARM release builds and add optional Rust target-triple support
+  to the release-binary helper.

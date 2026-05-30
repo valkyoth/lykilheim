@@ -241,7 +241,9 @@ python3 scripts/build_release_binary.py linux --ref v0.1.0
 ```
 
 Use `macos`, `bsd`, or `windows` for the matching host. See
-[docs/release-binaries.md](docs/release-binaries.md).
+[docs/release-binaries.md](docs/release-binaries.md). Native ARM hosts are
+supported; use `--target` only when the build host is prepared for an explicit
+Rust target triple.
 
 The gate writes evidence to `target/release-evidence/0.1.0/`. The focused
 pentest scope is documented in

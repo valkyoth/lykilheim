@@ -32,7 +32,6 @@ def main() -> int:
             "Run this script on the target OS, or pass --allow-platform-mismatch "
             "only when you know the build environment is correct."
         )
-
     env = os.environ.copy()
     ensure_prerequisites(args.install_prereqs, env)
 
@@ -51,11 +50,16 @@ def main() -> int:
 
     commit = output(["git", "rev-parse", "HEAD"], cwd=clone_dir).strip()
     ensure_rust_toolchain(clone_dir, args.install_prereqs, env)
+    if args.target and args.install_prereqs and shutil.which("rustup") is not None:
+        run(["rustup", "target", "add", args.target], env=env)
 
-    run(["cargo", "build", "--release", "--locked"], cwd=clone_dir, env=env)
+    build_command = ["cargo", "build", "--release", "--locked"]
+    if args.target:
+        build_command.extend(["--target", args.target])
+    run(build_command, cwd=clone_dir, env=env)
 
-    package = package_release(clone_dir, out_dir, requested_platform, commit)
-    binary = binary_path(clone_dir)
+    package = package_release(clone_dir, out_dir, requested_platform, commit, args.target)
+    binary = binary_path(clone_dir, args.target)
     package_sha = sha256_file(package)
     binary_sha = sha256_file(binary)
 
@@ -64,6 +68,7 @@ def main() -> int:
     print(f"repository: {args.repo}")
     print(f"commit: {commit}")
     print(f"platform: {requested_platform}")
+    print(f"target: {args.target or native_target_label()}")
     print(f"artifact: {package}")
     print(f"artifact sha256: {package_sha}")
     print(f"binary sha256: {binary_sha}")
@@ -88,6 +93,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("platform", choices=SUPPORTED_PLATFORMS)
     parser.add_argument("--repo", default=DEFAULT_REPO, help=f"Git repository to clone. Default: {DEFAULT_REPO}")
     parser.add_argument("--ref", help="Git tag, branch, or commit to check out before building.")
+    parser.add_argument(
+        "--target",
+        help=(
+            "Optional Rust target triple, for example aarch64-unknown-linux-gnu "
+            "or aarch64-apple-darwin. Native host builds do not need this."
+        ),
+    )
     parser.add_argument(
         "--work-dir",
         type=Path,
@@ -134,6 +146,10 @@ def detect_host_platform() -> str:
 def machine_label() -> str:
     machine = platform.machine().lower() or "unknown"
     return re.sub(r"[^a-z0-9_]+", "-", machine)
+
+
+def native_target_label() -> str:
+    return f"native-{machine_label()}"
 
 
 def ensure_prerequisites(install_prereqs: bool, env: dict[str, str]) -> None:
@@ -204,11 +220,17 @@ def rust_channel(path: Path) -> str:
     return match.group(1)
 
 
-def package_release(clone_dir: Path, out_dir: Path, requested_platform: str, commit: str) -> Path:
+def package_release(
+    clone_dir: Path,
+    out_dir: Path,
+    requested_platform: str,
+    commit: str,
+    target: str | None,
+) -> Path:
     version = cargo_version(clone_dir / "Cargo.toml")
-    arch = machine_label()
+    arch = target or machine_label()
     stem = f"lykilheim-{version}-{requested_platform}-{arch}-{commit[:12]}"
-    binary = binary_path(clone_dir)
+    binary = binary_path(clone_dir, target)
 
     if requested_platform == "windows":
         package = out_dir / f"{stem}.zip"
@@ -226,9 +248,12 @@ def package_release(clone_dir: Path, out_dir: Path, requested_platform: str, com
     return package
 
 
-def binary_path(clone_dir: Path) -> Path:
+def binary_path(clone_dir: Path, target: str | None) -> Path:
     name = "lykilheim.exe" if platform.system().lower() == "windows" else "lykilheim"
-    path = clone_dir / "target" / "release" / name
+    if target:
+        path = clone_dir / "target" / target / "release" / name
+    else:
+        path = clone_dir / "target" / "release" / name
     if not path.exists():
         fail(f"release binary was not created: {path}")
     return path
