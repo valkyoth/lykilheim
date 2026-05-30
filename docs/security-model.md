@@ -25,7 +25,17 @@ before returning plaintext.
 
 Security-sensitive operations must fail closed when no required audit sink can
 record the event. The `0.1.0` release defines the audit sink boundary; durable
-audit implementations arrive later.
+audit implementations arrive later. Because `0.1.0` has no durable audit sink
+and no secret-bearing mutating operations, `audit.required` defaults to `false`
+and `audit.required = true` is rejected until a later release can enforce it
+honestly.
+
+## Transport Security
+
+The server defaults to `127.0.0.1:8200`. The `0.1.0` preview does not terminate
+TLS itself and must not be exposed on an untrusted network. Any non-loopback
+deployment before native TLS exists must sit behind a trusted TLS-terminating
+proxy and network access control.
 
 ## Token Compromise
 

@@ -58,11 +58,11 @@ impl Error {
                     message: message.clone(),
                 },
             ),
-            Self::NotImplemented(message) => (
+            Self::NotImplemented(_) => (
                 StatusCode::NOT_IMPLEMENTED,
                 ErrorBody {
                     code: "not_implemented",
-                    message: (*message).to_owned(),
+                    message: "this endpoint is not available in this release".to_owned(),
                 },
             ),
             Self::Io(_) | Self::AddrParse(_) | Self::TomlDecode(_) | Self::Http(_) => (
@@ -107,5 +107,18 @@ mod tests {
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(body.code, "internal_error");
         assert_eq!(body.message, "internal server error");
+    }
+
+    #[test]
+    fn not_implemented_errors_do_not_leak_roadmap() {
+        let error = Error::NotImplemented("sys/init is implemented in a later version");
+        let (status, body) = error.to_response_parts();
+
+        assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
+        assert_eq!(body.code, "not_implemented");
+        assert_eq!(
+            body.message,
+            "this endpoint is not available in this release"
+        );
     }
 }

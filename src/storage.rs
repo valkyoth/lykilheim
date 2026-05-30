@@ -11,9 +11,15 @@ impl StorageKey {
     /// Create a storage key after basic path validation.
     pub fn new(value: impl Into<String>) -> crate::error::Result<Self> {
         let value = value.into();
-        if value.is_empty() || value.starts_with('/') || value.contains("..") {
+        if value.is_empty()
+            || value.len() > 512
+            || value.starts_with('/')
+            || value.starts_with("./")
+            || value.contains("..")
+            || value.contains('\0')
+        {
             return Err(crate::error::Error::Config(
-                "storage keys must be relative and must not contain '..'".to_owned(),
+                "storage keys must be clean relative paths without null bytes, '..', './' prefixes, or more than 512 bytes".to_owned(),
             ));
         }
         Ok(Self(value))
@@ -53,5 +59,20 @@ mod tests {
     #[test]
     fn storage_key_rejects_parent_segments() {
         assert!(StorageKey::new("secret/../root").is_err());
+    }
+
+    #[test]
+    fn storage_key_rejects_leading_current_directory() {
+        assert!(StorageKey::new("./secret").is_err());
+    }
+
+    #[test]
+    fn storage_key_rejects_null_bytes() {
+        assert!(StorageKey::new("secret\0tail").is_err());
+    }
+
+    #[test]
+    fn storage_key_rejects_long_values() {
+        assert!(StorageKey::new("a".repeat(513)).is_err());
     }
 }

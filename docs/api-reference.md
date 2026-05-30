@@ -16,8 +16,7 @@ Example response:
 ```json
 {
   "initialized": false,
-  "sealed": true,
-  "version": "0.1.0"
+  "sealed": true
 }
 ```
 
@@ -69,7 +68,7 @@ Example `0.1.0` response:
 ```json
 {
   "code": "not_implemented",
-  "message": "sys/init is defined for 0.1.0 but implemented in 0.2.0"
+  "message": "this endpoint is not available in this release"
 }
 ```
 
@@ -96,6 +95,6 @@ Errors return a stable JSON object:
 ```json
 {
   "code": "not_implemented",
-  "message": "sys/init is defined for 0.1.0 but implemented in 0.2.0"
+  "message": "this endpoint is not available in this release"
 }
 ```

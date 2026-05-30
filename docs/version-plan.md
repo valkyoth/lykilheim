@@ -26,7 +26,7 @@ starts.
 - CI posture: GitHub CodeQL default setup only; no advanced CodeQL workflow.
 - Dependency posture: use current crates at the time each implementation starts,
   record crate choices in release notes, and run `cargo update`, `cargo audit`,
-  and `cargo deny check` before release.
+  and `cargo deny check bans licenses sources` before release.
 - Parity posture: keep [Vault And OpenBao Feature-Parity Audit](feature-parity.md)
   current so every major Vault/OpenBao auth method, secrets engine, system
   backend area, HA mode, and enterprise/open-source feature is implemented,
@@ -40,7 +40,8 @@ Every release candidate must pass:
 - `cargo fmt --all --check` once `Cargo.toml` exists.
 - `cargo clippy --all-targets -- -D warnings` once `Cargo.toml` exists.
 - `cargo test` once `Cargo.toml` exists.
-- `cargo deny check` and `cargo audit` once dependency policy exists.
+- `cargo deny check bans licenses sources` and `cargo audit` once dependency
+  policy exists.
 - Rootless Podman smoke tests once containers exist.
 - API compatibility smoke tests for every stable endpoint in that version.
 - Documentation updates for every changed feature, endpoint, config key,

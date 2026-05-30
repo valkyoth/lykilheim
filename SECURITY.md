@@ -18,8 +18,8 @@ After the Rust crate exists, the release gate must also include:
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
-cargo deny check
-cargo audit
+cargo deny check bans licenses sources
+cargo audit --db target/advisory-db
 scripts/generate-sbom.sh
 ```
 
@@ -62,5 +62,5 @@ broken.
 ## Reporting
 
 Do not publish exploitable security details before a fix is available. Open a
-private security advisory or contact the maintainers directly once the project
-has public repository security channels configured.
+[GitHub private security advisory](https://github.com/valkyoth/lykilheim/security/advisories/new)
+or email `security@valkyoth.com` with the subject `Lykilheim Security Report`.

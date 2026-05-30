@@ -38,6 +38,12 @@ Planned stable preview scope:
 - Documentation is part of the definition of done from the first release.
 - CI uses local project checks and relies on GitHub CodeQL default setup, not an
   advanced CodeQL workflow.
+- Pentest follow-up tightened the foundation API and release process before
+  tag: zeroizing crypto interface contracts, sanitized unimplemented errors,
+  explicit request body limits, baseline security headers, rate limiting,
+  stricter storage-key validation, pinned container base images, pinned checkout
+  action SHAs, safer smoke-test temporary files, and required local security
+  tooling.
 
 ## Documentation
 
@@ -71,7 +77,9 @@ Release evidence to record immediately before publishing:
 
 ## Reviewed Advisory Exceptions
 
-- None expected for this bootstrap release.
+- `zmij 1.0.21` was reviewed after pentest flagged it as unfamiliar. It is a
+  legitimate crates.io dependency used by `serde_json 1.0.150`; repository:
+  <https://github.com/dtolnay/zmij>. No exception is required.
 
 ## Breaking Changes
 
@@ -89,6 +97,8 @@ Release evidence to record immediately before publishing:
 - No cryptographic barrier.
 - No auth engines.
 - No production container image.
+- No native TLS termination; keep the preview API on loopback or behind a
+  trusted TLS-terminating proxy.
 
 ## Checksums And Signatures
 

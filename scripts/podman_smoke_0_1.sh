@@ -32,7 +32,10 @@ fi
 health="$(curl -sSf "${base_url}/v1/sys/health")"
 printf '%s' "$health" | grep -q '"initialized":false'
 printf '%s' "$health" | grep -q '"sealed":true'
-printf '%s' "$health" | grep -q '"version":"0.1.0"'
+if printf '%s' "$health" | grep -q '"version"'; then
+    echo "podman smoke: health response must not expose version" >&2
+    exit 1
+fi
 
 version="$(curl -sSf "${base_url}/v1/sys/version")"
 if [ "$version" != '{"version":"0.1.0"}' ]; then

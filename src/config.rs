@@ -25,10 +25,13 @@ pub struct ServerConfig {
 }
 
 /// Audit configuration placeholder for the foundation release.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
 #[serde(default, deny_unknown_fields)]
 pub struct AuditConfig {
     /// Whether audit is required for mutating operations.
+    ///
+    /// This defaults to `false` in `0.1.0` because no durable audit sink exists
+    /// yet. Later releases must fail closed when this is enabled without a sink.
     pub required: bool,
 }
 
@@ -61,6 +64,12 @@ impl Config {
                 "server.listen must use a non-zero TCP port".to_owned(),
             ));
         }
+        if self.audit.required {
+            return Err(Error::Config(
+                "audit.required cannot be true in 0.1.0 because no durable audit sink is available"
+                    .to_owned(),
+            ));
+        }
         Ok(())
     }
 }
@@ -73,12 +82,6 @@ impl Default for ServerConfig {
     }
 }
 
-impl Default for AuditConfig {
-    fn default() -> Self {
-        Self { required: true }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::net::SocketAddr;
@@ -88,14 +91,14 @@ mod tests {
     use super::Config;
 
     #[test]
-    fn default_config_is_local_and_audit_required() {
+    fn default_config_is_local_and_audit_honest() {
         let config = Config::default();
 
         assert_eq!(
             config.server.listen,
             SocketAddr::from(([127, 0, 0, 1], 8200))
         );
-        assert!(config.audit.required);
+        assert!(!config.audit.required);
     }
 
     #[test]
@@ -106,7 +109,7 @@ mod tests {
             listen = "127.0.0.1:18200"
 
             [audit]
-            required = true
+            required = false
             "#,
         )?;
 
@@ -114,7 +117,7 @@ mod tests {
             config.server.listen,
             SocketAddr::from(([127, 0, 0, 1], 18200))
         );
-        assert!(config.audit.required);
+        assert!(!config.audit.required);
         Ok(())
     }
 
@@ -135,6 +138,27 @@ mod tests {
             error
                 .to_string()
                 .contains("server.listen must use a non-zero TCP port")
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_required_audit_without_sink() -> Result<()> {
+        let Err(error) = Config::from_toml_str(
+            r#"
+            [audit]
+            required = true
+            "#,
+        ) else {
+            return Err(crate::error::Error::Config(
+                "required audit should fail before durable sinks exist".to_owned(),
+            ));
+        };
+
+        assert!(
+            error
+                .to_string()
+                .contains("audit.required cannot be true in 0.1.0")
         );
         Ok(())
     }

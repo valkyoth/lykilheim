@@ -1,14 +1,29 @@
 //! HTTP API shape for the foundation release.
 
+use std::{
+    sync::{Arc, Mutex},
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use axum::{
     Json, Router,
-    extract::State,
-    http::StatusCode,
+    body::{Body, Bytes},
+    extract::{Request, State},
+    http::{HeaderValue, StatusCode, header},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 use serde::Serialize;
+use tower_http::{limit::RequestBodyLimitLayer, set_header::SetResponseHeaderLayer};
 
-use crate::{VERSION, config::Config, error::Error};
+use crate::{
+    VERSION,
+    config::Config,
+    error::{Error, ErrorBody},
+};
+
+const REQUESTS_PER_SECOND: u32 = 100;
 
 /// Shared HTTP API state.
 #[derive(Debug, Clone)]
@@ -16,6 +31,18 @@ pub struct AppState {
     version: &'static str,
     initialized: bool,
     sealed: bool,
+    rate_limit: Arc<RateLimitState>,
+}
+
+#[derive(Debug, Default)]
+struct RateLimitState {
+    window: Mutex<RateLimitWindow>,
+}
+
+#[derive(Debug, Default)]
+struct RateLimitWindow {
+    epoch_second: u64,
+    requests: u32,
 }
 
 impl AppState {
@@ -32,12 +59,15 @@ impl AppState {
             version: VERSION,
             initialized: false,
             sealed: true,
+            rate_limit: Arc::new(RateLimitState::default()),
         }
     }
 }
 
 /// Build the versioned API router.
 pub fn router(state: AppState) -> Router {
+    let rate_limit_state = state.clone();
+
     Router::new()
         .route("/v1/sys/health", get(health))
         .route("/v1/sys/seal-status", get(seal_status))
@@ -45,14 +75,76 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/sys/init", post(init))
         .route("/v1/sys/unseal", post(unseal))
         .route("/v1/sys/seal", post(seal))
+        .layer(middleware::from_fn_with_state(
+            rate_limit_state,
+            enforce_rate_limit,
+        ))
+        .layer(RequestBodyLimitLayer::new(64 * 1024))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("no-store"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::X_FRAME_OPTIONS,
+            HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
+        ))
         .with_state(state)
+}
+
+async fn enforce_rate_limit(
+    State(state): State<AppState>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    if !state.rate_limit.allow_one_request() {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ErrorBody {
+                code: "rate_limited",
+                message: "too many requests".to_owned(),
+            }),
+        )
+            .into_response();
+    }
+
+    next.run(request).await
+}
+
+impl RateLimitState {
+    fn allow_one_request(&self) -> bool {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_or(0, |duration| duration.as_secs());
+        let Ok(mut window) = self.window.lock() else {
+            return false;
+        };
+
+        if window.epoch_second != now {
+            window.epoch_second = now;
+            window.requests = 0;
+        }
+
+        if window.requests >= REQUESTS_PER_SECOND {
+            return false;
+        }
+
+        window.requests += 1;
+        true
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct HealthResponse {
     initialized: bool,
     sealed: bool,
-    version: &'static str,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -74,7 +166,6 @@ async fn health(State(state): State<AppState>) -> (StatusCode, Json<HealthRespon
         Json(HealthResponse {
             initialized: state.initialized,
             sealed: state.sealed,
-            version: state.version,
         }),
     )
 }
@@ -94,16 +185,16 @@ async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
     })
 }
 
-async fn init() -> Error {
-    Error::NotImplemented("sys/init is defined for 0.1.0 but implemented in 0.2.0")
+async fn init(_body: Bytes) -> Error {
+    Error::NotImplemented("sys/init")
 }
 
-async fn unseal() -> Error {
-    Error::NotImplemented("sys/unseal is defined for 0.1.0 but implemented in 0.2.0")
+async fn unseal(_body: Bytes) -> Error {
+    Error::NotImplemented("sys/unseal")
 }
 
-async fn seal() -> Error {
-    Error::NotImplemented("sys/seal is defined for 0.1.0 but implemented in 0.2.0")
+async fn seal(_body: Bytes) -> Error {
+    Error::NotImplemented("sys/seal")
 }
 
 #[cfg(test)]
@@ -124,11 +215,19 @@ mod tests {
             .await?;
 
         assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response_header(&response, "cache-control"),
+            Some("no-store")
+        );
+        assert_eq!(
+            response_header(&response, "x-content-type-options"),
+            Some("nosniff")
+        );
 
         let body = to_json(response.into_body()).await?;
         assert_eq!(body["initialized"], false);
         assert_eq!(body["sealed"], true);
-        assert_eq!(body["version"], env!("CARGO_PKG_VERSION"));
+        assert!(body.get("version").is_none());
         Ok(())
     }
 
@@ -156,6 +255,23 @@ mod tests {
 
         let body = to_json(response.into_body()).await?;
         assert_eq!(body["code"], "not_implemented");
+        assert_eq!(
+            body["message"],
+            "this endpoint is not available in this release"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn large_request_body_is_rejected() -> Result<(), Box<dyn std::error::Error>> {
+        let body = Body::from(vec![0_u8; 64 * 1024 + 1]);
+        let mut request = Request::new(body);
+        *request.method_mut() = "POST".parse()?;
+        *request.uri_mut() = "/v1/sys/init".parse::<Uri>()?;
+
+        let response = router(AppState::foundation()).oneshot(request).await?;
+
+        assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
         Ok(())
     }
 
@@ -169,5 +285,9 @@ mod tests {
     async fn to_json(body: Body) -> Result<Value, Box<dyn std::error::Error>> {
         let bytes = to_bytes(body, 1024 * 1024).await?;
         Ok(serde_json::from_slice(&bytes)?)
+    }
+
+    fn response_header<'a>(response: &'a axum::response::Response, name: &str) -> Option<&'a str> {
+        response.headers().get(name)?.to_str().ok()
     }
 }

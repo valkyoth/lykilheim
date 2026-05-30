@@ -3,7 +3,7 @@ set -eu
 
 port="${LYKILHEIM_SMOKE_PORT:-18200}"
 base_url="http://127.0.0.1:${port}"
-log_file="${TMPDIR:-/tmp}/lykilheim-api-smoke-$$.log"
+log_file="$(mktemp "${TMPDIR:-/tmp}/lykilheim-api-smoke.XXXXXX.log")"
 pid=""
 
 cleanup() {
@@ -36,7 +36,10 @@ fi
 health="$(curl -sSf "${base_url}/v1/sys/health")"
 printf '%s' "$health" | grep -q '"initialized":false'
 printf '%s' "$health" | grep -q '"sealed":true'
-printf '%s' "$health" | grep -q '"version":"0.1.0"'
+if printf '%s' "$health" | grep -q '"version"'; then
+    echo "api smoke: health response must not expose version" >&2
+    exit 1
+fi
 
 seal_status="$(curl -sSf "${base_url}/v1/sys/seal-status")"
 printf '%s' "$seal_status" | grep -q '"initialized":false'
@@ -52,5 +55,6 @@ fi
 
 init_response="$(curl -sS -X POST "${base_url}/v1/sys/init")"
 printf '%s' "$init_response" | grep -q '"code":"not_implemented"'
+printf '%s' "$init_response" | grep -q '"message":"this endpoint is not available in this release"'
 
 echo "api smoke: ok"

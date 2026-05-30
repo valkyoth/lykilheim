@@ -25,8 +25,8 @@ After the Rust crate is scaffolded, normal development checks must include:
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
-cargo deny check
-cargo audit
+cargo deny check bans licenses sources
+cargo audit --db target/advisory-db
 ```
 
 ## Checks
@@ -64,7 +64,8 @@ When adding or updating crates:
 - avoid git dependencies;
 - check maintenance status and license;
 - keep `Cargo.lock` updated;
-- run `cargo deny check` and `cargo audit`.
+- run `cargo deny check bans licenses sources` and
+  `cargo audit --db target/advisory-db`.
 
 ## Design Guidelines
 

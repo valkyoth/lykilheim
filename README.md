@@ -125,10 +125,12 @@ The normal local checks currently run:
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
+cargo deny check bans licenses sources
+cargo audit --db target/advisory-db
 ```
 
-If `cargo-deny` and `cargo-audit` are installed locally, `scripts/checks.sh`
-also runs `cargo deny check` and `cargo audit`.
+`cargo-deny` and `cargo-audit` are required for `scripts/checks.sh` once the
+Rust crate exists.
 
 ## Planned Release Lines
 
