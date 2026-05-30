@@ -27,9 +27,10 @@ API-driven vault with encrypted storage, fail-closed audit behavior, token and
 lease management, policy enforcement, rootless Wolfi containers, and a clear
 path toward safe extension through native adapters and sandboxed Wasm plugins.
 
-Current status: planning/bootstrap. The repository has governance, security
-policy, release notes, a feature-parity audit, and a versioned implementation
-plan. The Rust crate starts in the `0.1.0` foundation release.
+Current status: `0.1.0` foundation work. The repository has the first Rust
+crate, governance, security policy, release notes, a feature-parity audit,
+versioned implementation plan, API-shape docs, and rootless container
+placeholders.
 
 Lykilheim is licensed under the European Union Public Licence 1.2.
 
@@ -39,13 +40,14 @@ Lykilheim is licensed under the European Union Public Licence 1.2.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Version plan | Planned | Release ladder from `0.1.0` through `2.0.0`, with STOP gates before every release. |
-| Release notes | Planned | One Fluxheim-style release-note file per planned release. |
-| Feature parity audit | Planned | Vault/OpenBao coverage tracked as `1.0`, preview, post-1.0, research, or intentionally different. |
+| Version plan | Present | Release ladder from `0.1.0` through `2.0.0`, with STOP gates before every release. |
+| Release notes | Present | One Fluxheim-style release-note file per planned release. |
+| Feature parity audit | Present | Vault/OpenBao coverage tracked as `1.0`, preview, post-1.0, research, or intentionally different. |
 | Security policy | Present | Covers disclosure, dependency policy, crypto posture, and release evidence. |
 | GitHub metadata | Present | Contributing guide, PR template, issue template, Dependabot, CODEOWNERS, and CI bootstrap. |
 | Rust toolchain | Present | Rust `1.96.0` pinned in `rust-toolchain.toml`. |
-| Bootstrap checks | Present | `scripts/checks.sh` validates repository metadata until the Rust crate exists. |
+| Rust crate | Present | Foundation modules for API, config, errors, audit, crypto, storage, and tests. |
+| Bootstrap checks | Present | `scripts/checks.sh` validates metadata, docs, formatting, clippy, and tests. |
 
 ### First Stable Target
 
@@ -117,15 +119,16 @@ Read the Vault/OpenBao feature audit:
 sed -n '1,220p' docs/feature-parity.md
 ```
 
-After the Rust crate is scaffolded, the normal local checks will grow into:
+The normal local checks currently run:
 
 ```bash
 cargo fmt --all --check
 cargo clippy --all-targets -- -D warnings
 cargo test
-cargo deny check
-cargo audit
 ```
+
+If `cargo-deny` and `cargo-audit` are installed locally, `scripts/checks.sh`
+also runs `cargo deny check` and `cargo audit`.
 
 ## Planned Release Lines
 
@@ -174,20 +177,24 @@ and local smoke coverage where practical.
 ## Documentation
 
 - [Version Plan](docs/version-plan.md)
+- [Documentation Index](docs/index.md)
+- [Architecture](docs/architecture.md)
+- [API Reference](docs/api-reference.md)
+- [Local Development](docs/local-development.md)
+- [Build And Podman](docs/build-and-podman.md)
+- [Release Checklist](docs/release-checklist.md)
 - [Feature-Parity Audit](docs/feature-parity.md)
+- [Security Model](docs/security-model.md)
 - [Security Policy](SECURITY.md)
 - [Release Notes](release-notes)
 - [Contributing](.github/CONTRIBUTING.md)
 - [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md)
 - [Issue Template](.github/ISSUE_TEMPLATE/bug_report.yml)
 
-Planned documentation areas for implementation releases:
+Planned documentation areas for later implementation releases:
 
-- architecture overview;
-- API reference;
 - configuration reference;
 - operator guide;
-- security model;
 - storage and backup/restore guide;
 - audit guide;
 - auth, identity, policy, token, lease, KV v2, cubbyhole, wrapping, transit, and

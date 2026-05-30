@@ -56,9 +56,10 @@ Release evidence to record immediately before publishing:
 - Gate command: `scripts/checks.sh`
 - Gate report directory: TBD
 - Result: TBD
-- `cargo audit` result: TBD, or not applicable before `Cargo.toml`
-- `cargo deny check` result: TBD, or not applicable before `deny.toml`
+- `cargo audit` result: TBD
+- `cargo deny check` result: TBD
 - API smoke result: TBD
+- Cargo lockfile result: TBD
 - Feature-parity audit review: TBD
 - Documentation link check: TBD
 - Podman smoke result: TBD, or not applicable before containers
