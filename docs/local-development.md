@@ -54,5 +54,15 @@ Validate configuration without starting the server:
 cargo run -- --check-config --config examples/lykilheim.toml
 ```
 
+Build a clean native release binary artifact for the current operating system:
+
+```bash
+python3 scripts/build_release_binary.py linux --ref v0.1.0
+```
+
+Use `macos`, `bsd`, or `windows` instead of `linux` when running on those
+operating systems. See `docs/release-binaries.md` for the release workflow and
+Windows command.
+
 The default configuration binds to `127.0.0.1:8200`. Do not expose development
 builds to untrusted networks.

@@ -234,6 +234,15 @@ scripts/release_0_1_gate.sh
 LYKILHEIM_RELEASE_PODMAN=1 scripts/release_0_1_gate.sh
 ```
 
+Build native standalone release artifacts on each target OS:
+
+```bash
+python3 scripts/build_release_binary.py linux --ref v0.1.0
+```
+
+Use `macos`, `bsd`, or `windows` for the matching host. See
+[docs/release-binaries.md](docs/release-binaries.md).
+
 The gate writes evidence to `target/release-evidence/0.1.0/`. The focused
 pentest scope is documented in
 [docs/pentest-0.1.0.md](docs/pentest-0.1.0.md).

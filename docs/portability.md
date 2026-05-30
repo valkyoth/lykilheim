@@ -48,3 +48,8 @@ Before a feature is marked stable, its documentation must say which operating
 systems it supports and which behaviors are Linux-only. The Linux Wolfi
 container is release-blocking for container releases, but macOS, Windows, and
 BSD portability applies to the standalone binary.
+
+Native release binaries should be built on the operating system they target
+with `scripts/build_release_binary.py`. Cross-compilation can be added later as
+a separate release feature only when it has equivalent test and checksum
+evidence.

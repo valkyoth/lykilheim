@@ -15,6 +15,7 @@ Once release artifacts exist, also record:
 - SBOM checksums;
 - source archive checksums;
 - binary checksums;
+- release binary builder output for each native OS artifact;
 - container digests;
 - pentest handoff and findings summary;
 - signed tag verification;
@@ -32,4 +33,6 @@ Once release artifacts exist, also record:
 - CI permissions reviewed.
 - Container user model reviewed.
 - `docs/pentest-0.1.0.md` reviewed and used for the focused pentest.
+- `scripts/build_release_binary.py` run on each native OS that publishes a
+  standalone binary.
 - `release-notes/RELEASE_NOTES_0.1.0.md` evidence filled before tag.

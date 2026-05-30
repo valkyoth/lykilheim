@@ -8,6 +8,7 @@ This is the documentation index for the `0.1.0` foundation release.
 - [Security Model](security-model.md)
 - [Portability Policy](portability.md)
 - [Build And Podman](build-and-podman.md)
+- [Release Binary Builds](release-binaries.md)
 - [Release Checklist](release-checklist.md)
 - [0.1.0 Pentest Handoff](pentest-0.1.0.md)
 - [Feature-Parity Audit](feature-parity.md)

@@ -28,6 +28,7 @@ Planned stable preview scope:
   `Preview`, `Post-1.0`, `Research`, or `Different`;
 - release metadata validation and release checklist;
 - release evidence generation under `target/release-evidence/0.1.0/`;
+- native release binary builder for Linux, macOS, Windows, and BSD hosts;
 - focused pentest handoff for the `0.1.0` STOP gate;
 - portability policy for Linux, macOS, Windows, BSD-style Unix systems, and
   Linux-only Wolfi containers;
@@ -60,6 +61,7 @@ Documentation required for this release:
 - release checklist;
 - container plan;
 - portability policy;
+- release binary build guide;
 - pentest handoff.
 
 ## Security And Stability Gate
@@ -113,6 +115,7 @@ Record during the release:
 
 - Source archive checksum: TBD
 - Binary checksums: TBD, or not applicable
+- Native binary artifacts: TBD, or not applicable
 - SBOM checksums: TBD, or not applicable
 - Container digests: TBD, or not applicable
 - Tag signature: TBD

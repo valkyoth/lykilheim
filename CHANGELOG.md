@@ -13,3 +13,5 @@
   validation, pinned supply chain inputs, and release evidence.
 - Add a portability policy for Linux, macOS, Windows, BSD-style Unix standalone
   binaries, while keeping Wolfi containers Linux-only.
+- Add a native release-binary build helper for Linux, macOS, Windows, and BSD
+  hosts with GitHub release checksum output.
