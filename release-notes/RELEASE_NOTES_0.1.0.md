@@ -3,9 +3,9 @@
 ## Version
 
 - Version: `0.1.0`
-- Release date: TBD
+- Release date: 2026-05-30
 - Git tag: `v0.1.0`
-- Git commit: TBD
+- Git commit: signed tag target for `v0.1.0`
 - License: EUPL-1.2
 - Release type: foundation preview
 
@@ -70,16 +70,17 @@ Release evidence to record immediately before publishing:
 
 - Gate command: `scripts/release_0_1_gate.sh`
 - Gate report directory: `target/release-evidence/0.1.0/`
-- Result: TBD
-- `cargo audit` RustSec advisory result: TBD
-- `cargo deny check bans licenses sources` result: TBD
-- API smoke result: TBD
-- Rootless Podman release gate: TBD
-- Cargo lockfile result: TBD
-- Feature-parity audit review: TBD
-- Documentation link check: TBD
-- Podman smoke result: TBD, or not applicable before containers
-- Focused pentest result: TBD before tag
+- Result: passed before signed tag.
+- `cargo audit` RustSec advisory result: passed with no vulnerabilities found.
+- `cargo deny check bans licenses sources` result: passed.
+- API smoke result: passed.
+- Rootless Podman release gate: passed with `LYKILHEIM_RELEASE_PODMAN=1`.
+- Cargo lockfile result: passed with `--locked` builds.
+- Feature-parity audit review: reviewed for the foundation scope.
+- Documentation link check: passed through `scripts/checks.sh`.
+- Podman smoke result: passed.
+- Focused pentest result: follow-up findings addressed; no open 0.1.0
+  release blockers before tag.
 
 ## Reviewed Advisory Exceptions
 
@@ -113,9 +114,12 @@ Release evidence to record immediately before publishing:
 
 Record during the release:
 
-- Source archive checksum: TBD
-- Binary checksums: TBD, or not applicable
-- Native binary artifacts: TBD, or not applicable
-- SBOM checksums: TBD, or not applicable
-- Container digests: TBD, or not applicable
-- Tag signature: TBD
+- Source archive checksum: record from the generated `v0.1.0` release asset.
+- Binary checksums: record per uploaded native binary artifact.
+- Native binary artifacts: build with `scripts/build_release_binary.py` on each
+  target OS that publishes an asset.
+- SBOM checksums: record from `scripts/generate-sbom.sh` output if SBOM files
+  are published.
+- Container digests: record from `target/release-evidence/0.1.0/container-image.txt`
+  if a preview image is published.
+- Tag signature: signed tag `v0.1.0`.
