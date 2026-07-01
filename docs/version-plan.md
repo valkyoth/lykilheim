@@ -112,7 +112,7 @@ Scope:
 - Implement sealed/unsealed lifecycle and barrier API boundaries.
 - Implement Shamir initialization and unseal flow with threshold validation.
 - Wrap master key, barrier key, unseal shares, and plaintext payloads in
-  zeroizing/secrecy types.
+  sanitizing secret-memory types.
 - Encrypt records with AEAD and authenticated metadata.
 - Fail closed when entropy, key reconstruction, or authentication checks fail.
 

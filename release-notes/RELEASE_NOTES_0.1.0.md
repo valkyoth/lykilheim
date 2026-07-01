@@ -42,7 +42,7 @@ Planned stable preview scope:
 - CI uses local project checks and relies on GitHub CodeQL default setup, not an
   advanced CodeQL workflow.
 - Pentest follow-up tightened the foundation API and release process before
-  tag: zeroizing crypto interface contracts, sanitized unimplemented errors,
+  tag: sanitizing crypto interface contracts, sanitized unimplemented errors,
   explicit request body limits, baseline security headers, per-IP token-bucket
   rate limiting with `Retry-After`, stricter storage-key validation, pinned
   container base images, pinned checkout action SHAs, pinned CI security tool

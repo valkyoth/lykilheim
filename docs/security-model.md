@@ -12,7 +12,7 @@ foundation reports sealed state but does not yet implement secret storage.
 ## Unsealed State
 
 Unsealed state begins in `0.2.0`. Plaintext keys and payloads must be wrapped in
-types that zeroize memory when dropped. Debug output must not expose secret
+types that sanitize memory when dropped. Debug output must not expose secret
 material.
 
 ## Storage Compromise

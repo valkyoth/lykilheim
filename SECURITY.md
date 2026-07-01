@@ -45,9 +45,10 @@ executable supply-chain changes. Review them before merging dependency updates.
 ## Cryptography Policy
 
 Do not invent cryptography. Use reviewed primitives, constant-time APIs where
-available, and zeroizing wrappers for plaintext keys, token material, dynamic
-credentials, and transit payloads. Experimental post-quantum, TEE, ZKP, and
-eBPF work must stay behind explicit feature gates until reviewed and documented.
+available, and sanitizing secret wrappers for plaintext keys, token material,
+dynamic credentials, and transit payloads. Experimental post-quantum, TEE, ZKP,
+and eBPF work must stay behind explicit feature gates until reviewed and
+documented.
 
 ## Release Supply-Chain Evidence
 

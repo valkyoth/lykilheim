@@ -9,7 +9,7 @@
 - Add foundation documentation, release notes, threat model, release checklist,
   and rootless Wolfi container placeholders.
 - Apply 0.1.0 pentest follow-ups for security headers, request limits, per-IP
-  token-bucket rate limiting, zeroizing crypto interfaces, stricter storage-key
+  token-bucket rate limiting, sanitizing crypto interfaces, stricter storage-key
   validation, pinned supply chain inputs, and release evidence.
 - Add a portability policy for Linux, macOS, Windows, BSD-style Unix standalone
   binaries, while keeping Wolfi containers Linux-only.

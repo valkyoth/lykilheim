@@ -13,7 +13,7 @@
 
 Lykilheim `0.2.0` introduces sealed storage and the cryptographic barrier. The
 storage layer must only handle opaque encrypted records, and all plaintext key
-material must be protected with zeroizing wrappers.
+material must be protected with sanitizing secret wrappers.
 
 Planned stable preview scope:
 
@@ -22,7 +22,7 @@ Planned stable preview scope:
 - sealed and unsealed lifecycle boundaries;
 - Shamir initialization and unseal flow with threshold validation;
 - AEAD encryption for records and authenticated metadata;
-- zeroizing/secrecy wrappers for master keys, barrier keys, unseal shares, and
+- sanitizing secret wrappers for master keys, barrier keys, unseal shares, and
   plaintext payloads.
 
 ## Highlights
