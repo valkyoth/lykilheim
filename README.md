@@ -45,7 +45,7 @@ Lykilheim is licensed under the European Union Public Licence 1.2.
 | Feature parity audit | Present | Vault/OpenBao coverage tracked as `1.0`, preview, post-1.0, research, or intentionally different. |
 | Security policy | Present | Covers disclosure, dependency policy, crypto posture, and release evidence. |
 | GitHub metadata | Present | Contributing guide, PR template, issue template, Dependabot, CODEOWNERS, and CI bootstrap. |
-| Rust toolchain | Present | Rust `1.96.0` pinned in `rust-toolchain.toml`. |
+| Rust toolchain | Present | Rust `1.96.1` pinned in `rust-toolchain.toml`. |
 | Rust crate | Present | Foundation modules for API, config, errors, audit, crypto, storage, and tests. |
 | Bootstrap checks | Present | `scripts/checks.sh` validates metadata, docs, formatting, clippy, and tests. |
 

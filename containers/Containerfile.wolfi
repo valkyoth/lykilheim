@@ -1,5 +1,5 @@
-ARG RUST_IMAGE=docker.io/library/rust:1.96.0-bookworm@sha256:6514fcea6ed535a18ede60db527d6c0edcbd625d3b5f3ca0b0c16096a55cbcba
-ARG RUNTIME_IMAGE=cgr.dev/chainguard/wolfi-base@sha256:802712befa6f8f12a4f13dbe6df75fe65400ebe8eb7f570ee7976b0d738b6751
+ARG RUST_IMAGE=docker.io/library/rust:1.96.1-bookworm@sha256:d99f7b31f49909348dc59b51f3c95d1efded1701ffb222f095aaab7de3c4abd8
+ARG RUNTIME_IMAGE=cgr.dev/chainguard/wolfi-base@sha256:eba430503496d7a3b3bbf96cb0656e1daa37b6044c61c362778b7e17d371db3a
 
 FROM ${RUST_IMAGE} AS build
 WORKDIR /src

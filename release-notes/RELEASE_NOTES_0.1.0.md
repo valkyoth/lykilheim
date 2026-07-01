@@ -18,7 +18,7 @@ usable.
 
 Planned stable preview scope:
 
-- Rust crate or workspace scaffold pinned to Rust 1.96.0;
+- Rust crate or workspace scaffold pinned to Rust 1.96.1;
 - small module boundaries for API, configuration, errors, crypto interfaces,
   storage interfaces, audit, and test support;
 - public HTTP API shape for init, seal status, health, and version;

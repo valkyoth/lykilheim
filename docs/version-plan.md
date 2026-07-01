@@ -9,7 +9,7 @@ starts.
 
 - Project name: Lykilheim.
 - License: EUPL-1.2.
-- Toolchain: Rust 1.96.0, pinned in `rust-toolchain.toml`.
+- Toolchain: Rust 1.96.1, pinned in `rust-toolchain.toml`.
 - Delivery targets: portable standalone compiled binary and rootless Podman on Wolfi.
 - Portability posture: keep the standalone binary portable across Linux, macOS,
   Windows, and BSD-style Unix systems; keep the hardened Wolfi container
@@ -73,7 +73,7 @@ Scope:
 - Scaffold a Rust workspace or single crate with small modules for API,
   configuration, error handling, crypto interfaces, storage interfaces, audit,
   and test support.
-- Pin Rust 1.96.0 and configure `deny.toml`, `.cargo/audit.toml`, rustfmt, and
+- Pin Rust 1.96.1 and configure `deny.toml`, `.cargo/audit.toml`, rustfmt, and
   clippy policy.
 - Add `Containerfile` and `containers/Containerfile.wolfi` placeholders that
   build a non-root health-check binary once the crate exists.
