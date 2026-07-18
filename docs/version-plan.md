@@ -564,9 +564,15 @@ Deliverables:
 - one CAS lifecycle: `Uninitialized -> InitPreparedInMemory ->
   SharesDeliveredAndAcknowledged -> CryptoInitializedPendingBootstrap -> Active`;
 - shares generated only in locked memory and delivered through a fixed-length
-  binary local console/Unix-socket ceremony with a unique attempt ID;
-- local ceremony authenticates the client with OS peer credentials and establishes
-  an ephemeral per-attempt signing/MAC key held only in locked memory;
+  binary platform-local console, Unix-socket, or named-pipe ceremony with a unique
+  attempt ID;
+- local ceremony authenticates the client with trustworthy OS peer credentials
+  before establishing an ephemeral per-attempt signing/MAC key held only in
+  locked memory;
+- platforms without trustworthy peer credentials require a separately authenticated
+  local ceremony anchored by a one-time bootstrap secret from `SecretSource`, with
+  declared assurance; protected initialization refuses to run when neither
+  mechanism is available and never falls back to an unauthenticated socket or pipe;
 - authenticated share-set manifest binding vault UUID, purpose, generation,
   threshold, count, indexes, attempt ID, peer identity, and digest of the exact
   delivered set; manifest and acknowledgment are attempt-key authenticated;
@@ -586,12 +592,14 @@ Verification:
 - seal/recovery independence, partial delivery, client/server crash, lost ACK,
   forged peer/manifest/ACK, attempt-key loss, lost commit response, duplicate ACK,
   cancellation, orphan-share rejection, concurrent init, pending bootstrap resume,
-  namespace, and residue tests.
+  unsupported/spoofed OS peer identity, authenticated local fallback, high-assurance
+  refusal, platform matrix, namespace, and residue tests.
 
 Exit criteria:
 
-- Initialization commits only after acknowledged share custody, persists no shares,
-  creates one root namespace, and remains pending until first authority commits.
+- Initialization commits only through an authenticated local ceremony after
+  acknowledged share custody, persists no shares, creates one root namespace,
+  and remains pending until first authority commits.
 - Focused `0.20.0` initialization and share-handling pentest passes.
 
 ### 0.21.0 - Bounded Unseal Lifecycle
@@ -1720,6 +1728,9 @@ Deliverables:
 - destination-scoped egress broker enforcement and no dynamic-credential-engine reuse;
 - provider identity, account/tenant/project, controlling authority, key provenance,
   region/failure-domain, and assurance metadata;
+- admission-time discovery of provider API version, algorithms, and maximum
+  plaintext/ciphertext/metadata sizes; the complete selected ML-KEM ciphertext,
+  AEAD metadata, and canonical envelope must fit before a provider is activated;
 - direct Azure/GCP and ordinary AWS KMS are `ClassicalTransport`; AWS Nitro
   recipient mode is `AttestedClassicalRecipient` and is not labeled PQ-resistant;
 - approved local HSM/TPM non-exportable paths may report `LocalNonExportable` only
@@ -1734,6 +1745,13 @@ Deliverables:
 - before unseal, the vault creates an ephemeral PQ response-recipient key in
   locked memory; after cloud unwrap the bridge decapsulates the inner ciphertext
   and rewraps the share directly to that authenticated ephemeral vault recipient;
+- every unseal attempt uses a fresh vault response-recipient key; completion,
+  timeout, or cancellation destroys it, and responses for any prior attempt/key
+  are rejected;
+- the bridge holds a recovered raw share only in a fixed-capacity locked buffer
+  using reviewed `sanitization` facilities, never persists it, and clears it after
+  rewrap or on error, timeout, cancellation, and caught panic/unwind; the isolated
+  bridge worker disables dumps and cannot persist or resume raw-share state;
 - inner and outer envelopes cryptographically bind vault, node, provider, share
   index, assurance, seal generation, challenge nonce, expiry, and bridge identity;
   provider challenge/session authentication binds bridge and vault recipient keys;
@@ -1745,10 +1763,16 @@ Deliverables:
 Verification:
 
 - provider-specific conformance for challenge/wrap/unwrap/rotate/health/revoke;
+- provider size-boundary, API-version, algorithm-discovery, canonical-overhead,
+  and unsupported-capability admission tests;
 - ambient-credential rejection, egress escape, replay, stale generation, timeout,
   ambiguous retry, assurance mislabel/downgrade, bridge binding, outage, and provenance;
 - reversed cloud-then-PQ envelope ordering, raw-share cloud response, missing or
-  stale pre-unseal recipient, recipient substitution, and unlocked-key rejection;
+  stale pre-unseal recipient, recipient substitution, cross-provider/share-index
+  substitution, and unlocked-key rejection;
+- bridge restart between cloud unwrap and vault rewrap plus success, error, timeout,
+  cancellation, panic/unwind, abort, and crash residue tests for bridge and vault
+  buffers, dumps, and restart state;
 - capture every provider exchange, then compromise all classical transport and
   recipient keys; captures contain only PQ ciphertext and protected-quorum secret
   material remains confidential.
@@ -1756,8 +1780,9 @@ Verification:
 Exit criteria:
 
 - Every multi-seal participant passes the narrow seal-provider conformance suite,
-  exposes no dynamic cloud credential authority, and cannot claim hybrid assurance
-  unless raw shares remain absent from every recordable classical segment.
+  proves its complete envelope fits, exposes no dynamic cloud credential authority,
+  and cannot claim hybrid assurance unless raw shares remain bounded, cleared, and
+  absent from every recordable classical segment.
 - Focused `0.72.0` seal-provider implementation pentest passes.
 
 ### 0.73.0 - Threshold Multi-Seal And Auto-Unseal
@@ -1851,6 +1876,16 @@ Deliverables:
 - destination removal revokes its replication KEK, advances the source replication
   epoch, fences stale destination credentials, and issues fresh destination-scoped
   material only to remaining authorized replicas;
+- replication KEK rotation reuses the `0.19.0` durable-operation runtime and
+  `0.24.0` epoch model with `Prepared -> WriteEpochActive -> Rewrapping ->
+  AwaitingDestinationAck -> Retired`; removal can enter terminal
+  `DestinationFenced` from any non-retired state;
+- activation atomically makes the new epoch write-active and the old epoch
+  decrypt-only; bounded destination-specific rewrap records independent progress,
+  retry, pause, cancellation, failure, and recovery state;
+- retirement requires authenticated destination acknowledgement of completed
+  rewrap; removal overrides acknowledgement, fences the destination, and retires
+  its access without allowing reconnect to reactivate an old write epoch;
 - source-side authorization and namespace/path filtering before replication;
 - destination-side capability, policy, namespace, mount, schema, and algorithm
   authorization before materialization;
@@ -1875,6 +1910,9 @@ Verification:
 - shared-domain blast-radius, cross-destination KEK substitution/reuse, stale-epoch
   replay, destination-removal revocation, and independent-domain DEK
   rewrap/re-encrypt tests;
+- crash/restart at every rotation transition, concurrent destinations with
+  independent progress/failure, missing or forged acknowledgement, removal while
+  awaiting acknowledgement, and reconnect-after-retirement tests;
 - source-filter and destination-authorization bypass, unsupported capability,
   cursor replay/rollback, audit correlation, and reconnect tests;
 - lease-owner double-renew/revoke, conflict matrices, lag, partition, witness
@@ -1884,9 +1922,10 @@ Verification:
 Exit criteria:
 
 - Replication mode and key-sharing blast radius are explicit; shared-domain keys
-  are destination-and-epoch scoped and revoked on removal, only a witnessed and
-  fenced destination can become authoritative, and one cluster owns each dynamic
-  lease.
+  are destination-and-epoch scoped, no retired epoch can resume writes, and key
+  retirement follows destination acknowledgement or explicit fencing; only a
+  witnessed and fenced destination can become authoritative, and one cluster owns
+  each dynamic lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
