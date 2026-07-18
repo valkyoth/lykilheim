@@ -1662,18 +1662,32 @@ Deliverables:
   committed minimum-suite transition, credential overlap, rollback window, and
   refusal rules that cannot strand an unready voting quorum;
 - voter capability advertisement also commits supported command/API schema and
-  snapshot format reader/writer ranges; incompatible nodes remain learners and
-  cannot vote on commands or snapshots they cannot deterministically process.
+  snapshot format reader/writer ranges plus supported `StorageChargeCapability`
+  modes and charge-formula reader/writer versions;
+- Raft commits one active charge mode, formula version, charge-unit identifier, and
+  rounding contract used by deterministic apply; every reservation persists the
+  formula version that created it until an explicit committed reaccount operation;
+- charge-formula upgrades are two-phase: voters advertise reader/writer readiness,
+  the cluster proves a ready voting quorum, any required reservation increases commit
+  before activation, and only then commits the new active writer;
+- formula transition never silently reduces an existing reservation, and nodes that
+  cannot deterministically read every live reservation formula and apply the active
+  writer formula remain learners and cannot vote on affected commands or snapshots.
 
 Verification:
 
 - downgrade, stripping, impersonation, bootstrap, mixed-version readiness,
   command/snapshot schema mismatch, incompatible voter rejection, stranded-voter
-  prevention, suite rollback, identity rotation, expiry, and load tests.
+  prevention, suite rollback, identity rotation, expiry, and load tests;
+- mixed-version charge readers/writers, rolling formula upgrade, ready-quorum
+  activation, incompatible-voter demotion/rejection, deterministic charged-total
+  parity, original-formula reservation retention, and downgrade/reaccount tests.
 
 Exit criteria:
 
-- No forwarding, network join, or key-package recipient is trusted without hybrid identity.
+- No forwarding, network join, or key-package recipient is trusted without hybrid
+  identity, no voter applies a charge formula it cannot deterministically process,
+  and ready mixed-version voters compute identical charged totals.
 - Focused `0.68.0` cluster trust and identity pentest passes.
 
 ### 0.69.0 - Forwarded Identity And Cache Coherence
@@ -2180,6 +2194,30 @@ Deliverables:
   reservations remain through `ProofAvailable` or terminal pre-activation
   cancellation, while each quarantine reservation remains until its configured
   evidence disposition atomically reduces or releases it;
+- every destination returns a canonical hybrid-authenticated reservation assertion
+  binding operation and destination IDs, destination storage/backend identity,
+  `StorageChargeCapability` mode, formula version, charge-unit identifier and rounding
+  rules, reserved amount, reservation generation, and capability/configuration
+  revision; the source retains the exact assertion and digest with operation state;
+- reservation amounts are opaque destination-local capacity assertions: the source
+  verifies identity, revision, mode eligibility, operation binding, and declared
+  capacity class but never adds, orders, or numerically compares charged values from
+  local, PostgreSQL, SurrealDB, Raft, or differently versioned units as if they were
+  interchangeable; multi-destination health is a vector of local assertions, not one
+  synthetic byte total;
+- a destination backend, charge-mode, formula, unit, rounding, or configuration
+  change during an active rotation enters durable `ReaccountingRequired`, pauses
+  further replication writes and rebuild commands, and reconciles a fresh assertion
+  through `0.19.0`; old reservation capacity remains held until reaccounting confirms
+  destination-local non-decreasing obligation coverage, including while
+  `RetirementDeferred`, and a formula transition alone cannot reduce it;
+- a reaccount assertion binds old/new modes, formulas, units, amounts, revisions, and
+  a destination-computed deterministic transition result; the source authenticates
+  that result and operation binding but never derives equivalence or ordering by
+  comparing raw values across formulas or units;
+- resume, takeover, and every pre-write or pre-rebuild check require the exact current
+  reservation assertion and configuration revision; stale-formula acknowledgements,
+  cross-unit substitution, or accounting downgrade fail closed;
 - each participant's mandatory retention reservation has the closed lifecycle
   `Preparing -> Reserved -> Activated -> AcceptanceCommitted -> ProofPending ->
   ProofAvailable -> Released`;
@@ -2204,8 +2242,9 @@ Deliverables:
   participant after ambiguity, and compensate only confirmed reservations whose
   operation remains pre-acceptance;
 - immediately before committing `WriteEpochActive`, source revalidates every
-  participant reservation, generation, capacity, and state; after activation,
-  mandatory retention reservations cannot be cancelled or released, and after
+  participant reservation, generation, storage identity, charge mode/formula/unit,
+  capability/configuration revision, capacity, and state; after activation, mandatory
+  retention reservations cannot be cancelled or released, and after
   `AcceptanceCommitted`, source loss, destination removal, or operator action cannot
   erase strict evidence obligations;
 - strict admission also requires compatible `0.74.0` checkpoint topology, available
@@ -2338,6 +2377,10 @@ Verification:
 - local, PostgreSQL, SurrealDB, and Raft charge-assurance declarations, formula
   vectors, migration/restore continuity, physical free-space/health guard separation,
   and physical-pressure-without-evidence-deletion tests;
+- source/destination different-unit assertions, non-comparable multi-destination
+  accounting, formula change during active rewrap and `RetirementDeferred`, durable
+  reaccount pause/resume, stale assertion replay, capability/configuration revision
+  mismatch, cross-unit substitution, and attempted accounting downgrade tests;
 - disposition-tombstone pool exhaustion, failed tombstone charge, crash after
   tombstone charge before quarantine release, and duplicate/replayed release tests;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
@@ -2390,7 +2433,9 @@ Exit criteria:
   at least one authorized representation and never under-accounts or releases its
   reservation before durable evidence and audit intent exist; strict accounting uses
   exact or conservative versioned units independently from physical-health guards,
-  and quarantine release first charges its durable tombstone elsewhere;
+  quarantine release first charges its durable tombstone elsewhere, destination
+  assertions remain opaque and non-comparable across units, and formula/configuration
+  change pauses work until a current non-decreasing reservation is reconciled;
   compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
