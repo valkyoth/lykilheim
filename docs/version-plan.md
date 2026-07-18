@@ -1894,6 +1894,17 @@ Deliverables:
 - retirement requires authenticated destination acknowledgement of completed
   rewrap; removal overrides acknowledgement, fences the destination, and retires
   its access without allowing reconnect to reactivate an old write epoch;
+- canonical signed destination completion certificate binds source/destination
+  cluster IDs, rotation operation ID, fencing and membership epochs, old/new
+  replication-key epochs, immutable inventory snapshot and high-water mark, final
+  cursor, processed/failure counts, capability/schema versions, and completion time;
+- certificate scope explicitly accounts for live records, tombstones, quarantined
+  records, pending outboxes, backups, and snapshots; intentionally excluded backup
+  or snapshot generations remain documented old-key exposure with explicit restore
+  and retention policy and cannot support a cryptographic-deletion claim;
+- source accepts a certificate only from the expected current destination identity
+  for the exact operation and epochs, and retires the old epoch only when every
+  in-scope record is accounted for with no unresolved failure;
 - destination acknowledgement proves completed rewrap and readiness under the new
   epoch, not deletion of previously received key material; retirement stops future
   source-side use and distribution, while retained old keys, plaintext, and copied
@@ -1925,6 +1936,11 @@ Verification:
 - crash/restart at every rotation transition, concurrent destinations with
   independent progress/failure, missing or forged acknowledgement, removal while
   awaiting acknowledgement, and reconnect-after-retirement tests;
+- partial-inventory completion forgery, stale-certificate replay, cross-destination
+  and cross-operation substitution, retired signer/fencing epoch, and crash after
+  rewrap completion but before certificate acceptance tests;
+- late writes around the inventory high-water mark plus omitted failure, tombstone,
+  quarantine, pending-outbox, backup, and snapshot scope tests;
 - compromised-destination tests retain old keys/plaintext/ciphertext and verify
   source retirement prevents future use or distribution without claiming remote
   erasure;
@@ -1938,8 +1954,9 @@ Exit criteria:
 
 - Replication mode and key-sharing blast radius are explicit; shared-domain keys
   are destination-and-epoch scoped, no retired epoch can resume writes, and key
-  retirement follows destination acknowledgement or explicit fencing without
-  claiming remote erasure; only a witnessed and fenced destination can become
+  retirement follows an exact, failure-free completion certificate or explicit
+  fencing without claiming remote erasure; backup/snapshot exclusions remain
+  visible old-key exposure; only a witnessed and fenced destination can become
   authoritative, and one cluster owns each dynamic lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
