@@ -2025,6 +2025,29 @@ Deliverables:
   disposition durably records operation/destination/generation, manifest and
   certificate digests, root/cardinality, rebuild reason, policy revision, and audit
   evidence before atomically reducing its quarantine reservation;
+- full-manifest compaction is an idempotent copy-on-write lifecycle:
+  `FullRetained -> MetadataPrepared -> DispositionRecorded -> FullRemoved ->
+  ReservationAdjusted`; compaction first reserves worst-case metadata, index, and
+  backend-overhead headroom, authenticated metadata is durable before one local
+  commit records the disposition and audit-outbox intent, the full manifest is
+  removed only afterward, and charged-capacity reduction occurs last from confirmed
+  backend state;
+- metadata deletion has a separate idempotent
+  `MetadataRetained -> DeletionRecorded -> MetadataRemoved -> ReservationReleased`
+  lifecycle; the configured deletion condition and audit-outbox intent commit before
+  removal, a durable disposition tombstone remains, and duplicate or replayed
+  compaction/deletion requests return the existing state without repeating effects;
+- crash recovery may temporarily preserve both full and compact representations and
+  over-account their capacity, but compaction can never remove both representations,
+  under-account committed storage, or reduce/release a reservation before its durable
+  evidence disposition exists; audit-outbox failure leaves the earlier representation
+  and reservation intact;
+- all manifest, index, proof, certificate/root metadata, record-framing, encryption,
+  and backend-allocation byte calculations use checked arithmetic; strict mode
+  requires a backend capability that reports committed charged bytes including actual
+  backend overhead and fails admission when that capability is absent; a temporary
+  accounting failure after a write retains the conservative reservation until exact
+  reconciliation succeeds;
 - storage pressure, quota exhaustion, or demand from another operation never compacts
   or deletes quarantined evidence; these conditions apply backpressure and degraded
   health until the configured evidence condition is met or capacity is expanded;
@@ -2250,6 +2273,13 @@ Verification:
 - full-manifest compaction and metadata deletion occur only after their configured
   evidence conditions; proof-pending strict mode, legal/incident hold, storage
   pressure, and quota exhaustion alone preserve evidence and accounting;
+- crash before/after full-manifest compaction, crash between disposition recording
+  and reservation adjustment, duplicate/replayed compaction and deletion, and
+  audit-outbox failure during each disposition transition tests;
+- checked-arithmetic overflow and backend charged-byte accounting tests cover full
+  manifests, indexes, Merkle proofs, certificate/root metadata, encrypted framing,
+  and backend overhead; crash tests permit temporary over-accounting but reject lost
+  representations during compaction, under-accounting, or early reservation release;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2296,7 +2326,9 @@ Exit criteria:
   destination effect without mutating or reusing quarantined evidence; only an exact
   validated acknowledgement can exit the rebuild subphase, rebuild count/bytes are
   hard-bounded, capacity failure remains safely fenced, and evidence is reduced only
-  by its declared policy rather than storage pressure;
+  by its declared policy rather than storage pressure; crash-safe disposition keeps
+  at least one authorized representation and never under-accounts or releases its
+  reservation before durable evidence and audit intent exist;
   compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
