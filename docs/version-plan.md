@@ -1752,6 +1752,10 @@ Deliverables:
   using reviewed `sanitization` facilities, never persists it, and clears it after
   rewrap or on error, timeout, cancellation, and caught panic/unwind; the isolated
   bridge worker disables dumps and cannot persist or resume raw-share state;
+- uncatchable abort, `SIGKILL`, host failure, or power loss cannot execute clearing
+  code; assurance then derives from locked non-dump memory, process isolation, no
+  persistent raw-share state, OS memory reclamation, and documented per-platform
+  physical-memory residual risk rather than a synchronous zeroization claim;
 - inner and outer envelopes cryptographically bind vault, node, provider, share
   index, assurance, seal generation, challenge nonce, expiry, and bridge identity;
   provider challenge/session authentication binds bridge and vault recipient keys;
@@ -1773,6 +1777,9 @@ Verification:
 - bridge restart between cloud unwrap and vault rewrap plus success, error, timeout,
   cancellation, panic/unwind, abort, and crash residue tests for bridge and vault
   buffers, dumps, and restart state;
+- abort/crash tests prove no persistent artifact, core dump, restart state, or
+  serialized raw share exists; they do not claim synchronous clearing of
+  inaccessible physical memory after uncatchable termination;
 - capture every provider exchange, then compromise all classical transport and
   recipient keys; captures contain only PQ ciphertext and protected-quorum secret
   material remains confidential.
@@ -1781,8 +1788,9 @@ Exit criteria:
 
 - Every multi-seal participant passes the narrow seal-provider conformance suite,
   proves its complete envelope fits, exposes no dynamic cloud credential authority,
-  and cannot claim hybrid assurance unless raw shares remain bounded, cleared, and
-  absent from every recordable classical segment.
+  and cannot claim hybrid assurance unless raw shares remain bounded, cleared on
+  every handled path, and absent from every recordable classical segment; residual
+  risk after uncatchable termination is explicit.
 - Focused `0.72.0` seal-provider implementation pentest passes.
 
 ### 0.73.0 - Threshold Multi-Seal And Auto-Unseal
@@ -1886,6 +1894,10 @@ Deliverables:
 - retirement requires authenticated destination acknowledgement of completed
   rewrap; removal overrides acknowledgement, fences the destination, and retires
   its access without allowing reconnect to reactivate an old write epoch;
+- destination acknowledgement proves completed rewrap and readiness under the new
+  epoch, not deletion of previously received key material; retirement stops future
+  source-side use and distribution, while retained old keys, plaintext, and copied
+  ciphertext remain in the documented destination-compromise blast radius;
 - source-side authorization and namespace/path filtering before replication;
 - destination-side capability, policy, namespace, mount, schema, and algorithm
   authorization before materialization;
@@ -1913,6 +1925,9 @@ Verification:
 - crash/restart at every rotation transition, concurrent destinations with
   independent progress/failure, missing or forged acknowledgement, removal while
   awaiting acknowledgement, and reconnect-after-retirement tests;
+- compromised-destination tests retain old keys/plaintext/ciphertext and verify
+  source retirement prevents future use or distribution without claiming remote
+  erasure;
 - source-filter and destination-authorization bypass, unsupported capability,
   cursor replay/rollback, audit correlation, and reconnect tests;
 - lease-owner double-renew/revoke, conflict matrices, lag, partition, witness
@@ -1923,9 +1938,9 @@ Exit criteria:
 
 - Replication mode and key-sharing blast radius are explicit; shared-domain keys
   are destination-and-epoch scoped, no retired epoch can resume writes, and key
-  retirement follows destination acknowledgement or explicit fencing; only a
-  witnessed and fenced destination can become authoritative, and one cluster owns
-  each dynamic lease.
+  retirement follows destination acknowledgement or explicit fencing without
+  claiming remote erasure; only a witnessed and fenced destination can become
+  authoritative, and one cluster owns each dynamic lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
