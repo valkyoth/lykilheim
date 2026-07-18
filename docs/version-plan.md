@@ -565,10 +565,15 @@ Deliverables:
   SharesDeliveredAndAcknowledged -> CryptoInitializedPendingBootstrap -> Active`;
 - shares generated only in locked memory and delivered through a fixed-length
   binary local console/Unix-socket ceremony with a unique attempt ID;
+- local ceremony authenticates the client with OS peer credentials and establishes
+  an ephemeral per-attempt signing/MAC key held only in locked memory;
 - authenticated share-set manifest binding vault UUID, purpose, generation,
-  threshold, count, indexes, attempt ID, and digest of the exact delivered set;
-- client acknowledgment of durable custody binds the manifest digest; only then
-  atomically persist the wrapped keyring, root namespace, and pending-bootstrap state;
+  threshold, count, indexes, attempt ID, peer identity, and digest of the exact
+  delivered set; manifest and acknowledgment are attempt-key authenticated;
+- client acknowledgment of durable custody binds the manifest digest and is an
+  explicit client assertion, not proof that an operator stored shares safely;
+  only then atomically persist the wrapped keyring, root namespace, and
+  pending-bootstrap state;
 - crash/disconnect before commit returns to `Uninitialized`; delivered shares are
   harmless orphans and are rejected by every later attempt;
 - lost final commit response is resolved through attempt-ID status lookup without
@@ -579,8 +584,9 @@ Deliverables:
 Verification:
 
 - seal/recovery independence, partial delivery, client/server crash, lost ACK,
-  lost commit response, duplicate ACK, cancellation, orphan-share rejection,
-  concurrent init, pending bootstrap resume, namespace, and residue tests.
+  forged peer/manifest/ACK, attempt-key loss, lost commit response, duplicate ACK,
+  cancellation, orphan-share rejection, concurrent init, pending bootstrap resume,
+  namespace, and residue tests.
 
 Exit criteria:
 
@@ -722,6 +728,9 @@ Deliverables:
 - cluster-authoritative credential, token, namespace, MFA, SecretID, login, and
   durable lockout counter contract for later Raft integration;
 - stable operation/accounting ID and exactly-once forwarded charge semantics;
+- authoritative attempt charge, failed-auth/login outcome, lockout transition,
+  and retained replay result commit atomically in one Raft command keyed by the
+  accounting ID; client result releases only after commit;
 - sensitive authentication fails closed when authoritative counters are unavailable;
 - optional bounded local budget delegation with lease/epoch, overspend ceiling,
   reconciliation, revocation, and leadership/partition behavior;
@@ -730,6 +739,7 @@ Deliverables:
 Verification:
 
 - deterministic time, multi-node spray model, duplicate forwarding charge,
+  crash before/after atomic accounting commit and lost result retry,
   delegated-budget overspend/reconcile, partition, leader change, stale follower,
   spoofing, cardinality, fairness, eviction, and DoS tests.
 
@@ -1630,12 +1640,15 @@ Deliverables:
 - follower audit failure blocks forwarding; leader audit failure before commit or
   release blocks the effect/response under the fail-closed gate;
 - exact-once cluster-authoritative rate/lockout charging for forwarded requests,
-  delegated-budget reconciliation, and fail-closed partition behavior;
+  with charge, failed-auth outcome, lockout transition, and replay result in one
+  Raft command keyed by stable accounting ID;
+- delegated-budget reconciliation and fail-closed partition behavior;
 - token revocation, policy change, identity merge, and seal-generation cache invalidation.
 
 Verification:
 
 - forged forwarding, multi-node spraying, double/missed charge, delegated overspend,
+  crash before/after accounting commit, lost result replay,
   follower/leader audit failure, outbox duplicate, intent-without-outcome recovery,
   per-node chain correlation, stale cache, replay, context swap, partition, and
   leadership-change tests.
@@ -1698,14 +1711,24 @@ Deliverables:
 
 - `SealProvider` capability interface for challenge, wrap, unwrap, rotate,
   health, provenance, revoke, and supported-assurance discovery;
+- closed runtime `SealResponseAssurance`: `ClassicalTransport`,
+  `AttestedClassicalRecipient`, `HybridWrappedResponse`, and
+  `LocalNonExportable`; assurance is negotiated/reported, never inferred by name;
 - AWS KMS, Azure Key Vault/Managed HSM, and GCP Cloud KMS implementations;
 - PKCS#11/HSM, TPM, and deterministic local-test providers through the same contract;
 - `SecretSource` credentials only, with ambient cloud credential discovery forbidden;
 - destination-scoped egress broker enforcement and no dynamic-credential-engine reuse;
 - provider identity, account/tenant/project, controlling authority, key provenance,
   region/failure-domain, and assurance metadata;
-- hybrid-encrypted request/response payloads bound to vault, node, provider,
-  seal generation, challenge nonce, and expiry even when provider TLS is classical;
+- direct Azure/GCP and ordinary AWS KMS are `ClassicalTransport`; AWS Nitro
+  recipient mode is `AttestedClassicalRecipient` and is not labeled PQ-resistant;
+- approved local HSM/TPM non-exportable paths may report `LocalNonExportable` only
+  when plaintext never crosses a recordable classical network boundary;
+- optional PQ seal-provider bridge authenticates over hybrid transport, owns a
+  non-exportable PQ recipient key, fronts cloud KMS, and returns a bound
+  application-layer `HybridWrappedResponse`;
+- every wrapped response binds vault, node, provider, assurance, seal generation,
+  challenge nonce, and expiry; unsupported response protection is explicit;
 - typed replay, stale generation, timeout, ambiguous result, retry, revoke,
   throttling, and outage semantics.
 
@@ -1713,7 +1736,9 @@ Verification:
 
 - provider-specific conformance for challenge/wrap/unwrap/rotate/health/revoke;
 - ambient-credential rejection, egress escape, replay, stale generation, timeout,
-  ambiguous retry, payload downgrade, outage, and provenance tests.
+  ambiguous retry, assurance mislabel/downgrade, bridge binding, outage, and provenance;
+- capture every provider exchange, then compromise all classical transport and
+  recipient keys; protected-quorum secret material remains confidential.
 
 Exit criteria:
 
@@ -1729,14 +1754,21 @@ Deliverables:
 
 - protected profile requires threshold `t >= 2` across unique provider authorities
   and failure domains, with no duplicate shares under one controlling KMS identity;
-- KEK shares across independent KMS/HSM/TPM providers and explicit independence proof;
+- protected HNDL quorum counts only `HybridWrappedResponse` and approved
+  `LocalNonExportable` providers; classical/attested-classical cloud factors may
+  be supplemental but can never reconstruct or satisfy the protected threshold;
+- KEK shares across independent providers and explicit independence/assurance proof;
 - challenge binding to vault, node, generation, provider, nonce, and expiry;
-- hybrid envelope, recovery keys, seal migration, and no downgrade to one-provider unseal.
+- runtime assurance downgrade recomputes quorum eligibility and forces/keeps the
+  vault sealed when the protected threshold is no longer met;
+- recovery keys, seal migration, and no downgrade to one-provider unseal.
 
 Verification:
 
 - shared-authority/failure-domain rejection, duplicate provider, provider loss,
-  replay, stale response, one-provider downgrade, quorum, and migration tests.
+  classical-only reconstruction rejection, assurance downgrade-to-sealed,
+  recorded-session/later-classical-key-compromise HNDL model, replay, stale
+  response, one-provider downgrade, quorum, and migration tests.
 
 Exit criteria:
 
@@ -1787,21 +1819,51 @@ Exit criteria:
 
 ### 0.76.0 - Replication And Multi-Cluster
 
-Goal: add safe read scaling, DR, and multi-region replication.
+Goal: add cryptographically explicit read scaling, DR, and multi-region replication.
 
 Deliverables:
 
-- standbys/read replicas with consistency tokens;
-- DR promotion/activation and performance replication;
-- namespace/path filters with explicit conflict and stale-read policy.
+- independent cluster IDs, trust roots, membership epochs, and hybrid replication
+  identities;
+- two explicit cryptographic modes:
+  - shared-domain DR with narrowly scoped replication KEK material and documented
+    expanded compromise blast radius, never exported barrier/root keys;
+  - independent-domain DR with destination-specific DEK rewrapping or brokered
+    decrypt/re-encrypt over hybrid authenticated replication, without exporting
+    source or destination barrier/root keys;
+- source-side authorization and namespace/path filtering before replication;
+- destination-side capability, policy, namespace, mount, schema, and algorithm
+  authorization before materialization;
+- standbys/read replicas with consistency tokens and explicit stale-read policy;
+- active/passive fencing epochs, promotion witness/quorum, activation tokens,
+  split-brain refusal, failback, and stale-source rejection;
+- post-promotion write-key re-encryption/rewrap plan and replication identity
+  rotation;
+- stable replicated operation IDs plus source/destination audit evidence bound to
+  source/destination clusters, fencing epoch, and replicated object generation;
+- reconnect replay/rollback protection using signed checkpoints and monotonic
+  replication cursors;
+- dynamic-lease ownership transfer state ensuring one cluster alone can renew,
+  revoke, compensate, or issue against an upstream credential;
+- typed conflict rules for KV versions, policies, identities, tokens, leases,
+  approvals, operation results, and audit outboxes;
+- explicit reject/defer/translate behavior when destination lacks an algorithm,
+  provider, mount, command, snapshot, plugin, or state-schema capability.
 
 Verification:
 
-- lag, partition, promotion, replay, filter escape, failback, and recovery drills.
+- shared-domain blast-radius and independent-domain DEK rewrap/re-encrypt tests;
+- source-filter and destination-authorization bypass, unsupported capability,
+  cursor replay/rollback, audit correlation, and reconnect tests;
+- lease-owner double-renew/revoke, conflict matrices, lag, partition, witness
+  quorum, split-brain promotion, fencing, identity rotation, failback, and
+  recovery drills.
 
 Exit criteria:
 
-- Stale or filtered replicas cannot silently become authoritative.
+- Replication mode and key-sharing blast radius are explicit; only a witnessed,
+  fenced destination can become authoritative, and one cluster owns each dynamic
+  lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
