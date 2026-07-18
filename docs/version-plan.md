@@ -1980,10 +1980,32 @@ Deliverables:
 - offline verifier rejects any proposal signature, acceptance record, or log entry
   lacking valid checkpoint inclusion; proof generation is asynchronous, idempotent,
   recoverable by a new leader, and never gates or rolls back retirement safety;
+- auxiliary `AcceptanceCommitted -> ProofPending -> ProofAvailable` lifecycle is
+  independent from the terminal `Retired` rotation state and can never revert,
+  suspend, or weaken retirement and key-path fencing;
+- the acceptance command atomically creates a durable idempotent proof job and
+  minimal proof seed containing acceptance record, term/index, command digest,
+  suite/key generations, and inclusion-leaf material retained until a covering
+  checkpoint and proof are durable;
+- proof jobs reuse the `0.19.0` operation runtime with bounded concurrency,
+  idempotency key, retry count/backoff, takeover, and operator-resume semantics;
+- rotation admission reserves one pending-proof slot and worst-case proof-seed bytes
+  until cancellation releases them or acceptance atomically replaces them with the
+  actual seed, preventing in-flight rotations from oversubscribing proof storage;
+- configured pending-proof count/byte hard limits and maximum-age SLO are enforced;
+  admission backpressure rejects new rotations before retained proof material can
+  exhaust storage, while age/availability breaches expose typed degraded health
+  with backlog count, bytes, oldest age, checkpoint lag, and last error;
+- closed proof-retention policy distinguishes ordinary online acceptance from
+  strict offline proof: ordinary mode permits destination result-manifest cleanup
+  after authoritative online acceptance and normal evidence retention while source
+  proof seed remains; strict mode refuses cleanup until `ProofAvailable`;
+- strict-policy admission requires compatible `0.74.0` checkpoint topology,
+  available signer/trust history, retention capacity for configured rotation rate,
+  and a maximum checkpoint latency within pending-proof count/byte/age budgets;
 - after a lost acceptance response, the destination queries operation status by
   operation/certificate digest; online status remains authoritative while proof is
-  pending, and the destination retains its frozen result manifest until the matching
-  committed record and offline proof are available and evidence policy permits cleanup;
+  pending, and cleanup follows the declared ordinary or strict retention policy;
 - durable operation state includes challenge, scope root/cardinality, validated
   pending result root/cardinality when available, expected completion signer/identity
   and membership/fencing epochs, certificate format, signature/hash suites, and
@@ -2061,6 +2083,13 @@ Verification:
 - checkpoint/signing-provider delay or outage after retirement, new-leader
   idempotent proof recovery, restore, historical-key/suite verification, and
   byte-identical online status retrieval tests;
+- prolonged checkpoint outage, pending-proof disk pressure/exhaustion, repeated
+  rotations, duplicate proof jobs, count/byte/age admission backpressure, degraded
+  health, concurrent reservation race/release, restore with backlog, and eventual
+  checkpoint recovery tests;
+- ordinary cleanup after online acceptance, strict-policy cleanup refusal before
+  proof, proof-seed retention, strict admission incompatibility, retention-capacity,
+  and checkpoint-latency boundary tests;
 - slow PQ/HSM checkpoint signing does not block unrelated Raft proposals;
   deterministic follower-apply instrumentation proves acceptance apply invokes no
   signing, private-key access, provider I/O, entropy, or ambient randomness;
@@ -2085,7 +2114,9 @@ Exit criteria:
   retirement, old destination-facing key-path invalidation, and its replayable
   online acceptance record commit atomically while follower apply remains keyless
   and deterministic; independently verifiable commit proof follows through a signed
-  checkpoint without gating retirement or claiming remote persistence or erasure;
+  checkpoint through a bounded auxiliary lifecycle that cannot gate or reverse
+  retirement; declared cleanup policy and proof-backlog admission prevent unbounded
+  retention without claiming remote persistence or erasure;
   legitimate identity/suite rotation can re-attest but never redefine scope or
   bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
   a witnessed and fenced destination can become authoritative, and one cluster owns
