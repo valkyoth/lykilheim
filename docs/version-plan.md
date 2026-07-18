@@ -1988,6 +1988,12 @@ Deliverables:
   delivery returns the same result, and takeover reconciles destination state before
   sending; source safety never depends on an immediate acknowledgement because the
   old generation was fenced locally before the external effect;
+- source accepts a rebuild acknowledgement only for the exact persisted command and
+  operation IDs, new generation, destination identity/suite, result root, and
+  certificate digest; it revalidates the immutable manifest and certificate against
+  the frozen source scope, then compare-and-sets the rebuild subphase to
+  `AwaitingDestinationAck`, while duplicate acknowledgement returns that same state
+  and any mismatch leaves the source fence in force;
 - every bounded resumable result page carries a hybrid-authenticated page transcript
   and Merkle range proof binding operation ID, source scope root, result root,
   manifest generation, index/range, continuation cursor, and total cardinality;
@@ -2196,7 +2202,8 @@ Verification:
 - source crash after fencing before command delivery, lost rebuild command or
   acknowledgement, destination restart, duplicate rebuild delivery, old-generation
   page delivery during rebuild, concurrent takeover, cross-generation substitution,
-  and attempted quarantined-certificate reuse tests;
+  attempted quarantined-certificate reuse, forged or mismatched acknowledgement, and
+  duplicate acknowledgement after source transition tests;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2240,7 +2247,8 @@ Exit criteria:
   cancellation cannot restore the old write epoch or discard that capacity; deferred
   execution resumes without duplicate accounting, and signed-manifest rebuild first
   fences the old generation at the source and then reconciles an idempotent
-  destination effect without mutating or reusing quarantined evidence;
+  destination effect without mutating or reusing quarantined evidence; only an exact
+  validated acknowledgement can exit the rebuild subphase;
   compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
