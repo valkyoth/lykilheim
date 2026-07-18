@@ -2,11 +2,10 @@
 
 Status: normative implementation order
 
-Lykilheim is a from-scratch Rust secrets manager targeting a defensible
-quantum-resistant, crypto-agile European vault. `1.0.0` is the first stable
-release. All planned product work, including the former `1.1.0` through
-`2.0.0` scope, is now split into small pre-1.0 milestones so interfaces can
-change while security boundaries are still being proven.
+Lykilheim is a from-scratch Rust secrets manager targeting a defensible,
+crypto-agile, quantum-resistant European vault. `1.0.0` is the first stable
+release. All product work is split into small pre-1.0 milestones so trust
+boundaries can be reviewed, migrated, documented, and pentested independently.
 
 Tags use:
 
@@ -16,9 +15,9 @@ v0.N.P      patch or security-fix release
 v1.0.0      first stable production release
 ```
 
-The list is intentionally granular and is not a maximum. Adjacent unreleased
-milestones may be split when that makes review, documentation, migration, or
-pentesting clearer. Released versions are never renumbered.
+The list is intentionally granular and is not a maximum. Unreleased milestones
+may be split when that gives one owner and one testable security boundary.
+Released versions are never renumbered.
 
 ## Project Rules
 
@@ -28,20 +27,18 @@ pentesting clearer. Released versions are never renumbered.
 - Delivery targets: portable standalone compiled binary and rootless Podman on Wolfi.
 - Portability target: Linux, macOS, Windows, and BSD-style Unix for the binary;
   the hardened Wolfi container remains Linux-only.
-- API model: fully API-driven; CLIs and integrations are API clients, not a
-  second control plane.
-- Code layout: focused crates or modules aligned to trust and ownership
-  boundaries; no large multipurpose source files.
-- Documentation: every feature, endpoint, configuration key, storage format,
-  deployment path, security boundary, failure mode, migration, and operator
-  workflow is documented to the same practical standard as Fluxheim before it
-  is done.
+- API model: fully API-driven; CLIs and integrations are clients, not a second
+  control plane.
+- Code layout: focused crates or modules aligned to trust boundaries, with
+  explicit dependency direction and isolated unsafe/platform code.
+- Documentation: every feature, endpoint, configuration key, format, deployment,
+  security boundary, failure mode, migration, and operator workflow is documented
+  to the same practical standard as Fluxheim before it is done.
 - Release notes: every milestone gets
   `release-notes/RELEASE_NOTES_X.Y.Z.md` before implementation begins; evidence,
   limitations, checksums, and signatures are completed before tagging.
 - Security posture: fail closed when authorization, audit durability,
-  cryptographic policy, storage integrity, or secret-memory guarantees cannot
-  be established.
+  cryptographic policy, storage integrity, or required memory guarantees fail.
 - Quantum claim: use "quantum-resistant under current cryptanalytic knowledge,
   crypto-agile, and hybrid while standards and implementations mature." Never
   claim that an algorithm or deployment is unconditionally quantum-proof.
@@ -52,92 +49,118 @@ pentesting clearer. Released versions are never renumbered.
   OpenBao capability is implemented, scheduled, experimental, or deliberately
   different with operator impact documented.
 
+## Stable Profiles
+
+All profiles share sealed storage, mandatory authorization, durable audit, and
+safe defaults. Optional profiles are additive Cargo features and runtime policy;
+they must not enlarge the default core dependency graph or ambient authority.
+
+- `core`: local or Raft storage, seal/barrier, audit, policy, tokens, leases,
+  identity, AppRole, userpass, KV v2, Transit, backup, and recovery.
+- `quantum-resistant`: core plus hybrid API and cluster transport, PQ Transit and
+  PKI, PQ checkpoints, and minimum authentication-assurance policy.
+- `extended`: broad auth, external storage, native adapters, Wasm extensions,
+  replication, operator intelligence, KMIP/Transform, and sync integrations.
+
+Every binary reports its compiled features, active profile, provider assurance,
+and unavailable capabilities. Feature combinations have compile and runtime
+tests; a disabled optional component cannot weaken core behavior.
+
+## Inherited Security Contracts
+
+Every milestone inherits these requirements from the first boundary that can
+use them:
+
+- hard size, cardinality, depth, work, concurrency, and retention limits ship
+  with each resource; later quota APIs make safe limits configurable;
+- mutation APIs use idempotency keys, optimistic revisions/ETags, retained replay
+  results, cancellation rules, snapshot pagination tokens, and explicit
+  `IndeterminateCommit` where applicable;
+- secret classes define maximum size, permitted owners, copies, lifetime,
+  logging/redaction, clearing, and platform limitations;
+- secret-bearing configuration uses protected files/file descriptors, system
+  credential facilities, interactive input, or wrapped internal references;
+  environment variables are weaker documented mode, and CLI arguments are forbidden;
+- native outbound access uses the central destination-capability broker;
+- persisted formats are canonical, bounded, authenticated, versioned, fuzzed,
+  and have migration or explicit rejection fixtures;
+- threat model, control map, API/config docs, feature parity, release notes,
+  recovery, and known limitations change with the implementation.
+
 ## Roadmap Authority
 
 This document is the normative implementation order. README summaries,
-feature-parity labels, release-note placeholders, and architecture documents
-must be synchronized before work starts on the affected milestone. Existing
-post-1.0 and `2.0.0` placeholders are superseded by the pre-1.0 milestones
+feature-parity labels, release-note placeholders, architecture, and security
+model must be synchronized during `0.2.0` and before each affected milestone.
+Old post-1.0 and `2.0.0` placeholders are superseded by the pre-1.0 milestones
 below and are not implementation authority.
-
-Each milestone should change one primary trust boundary. A milestone may ship
-an explicitly labeled preview only when its insecure fallback is disabled and
-the preview cannot weaken stable paths. No compatibility promise is made before
-`1.0.0`, but every persisted format must have migration or explicit rejection
-tests from the release that introduces it.
 
 ## Mandatory Release Gate
 
 Every release candidate must pass:
 
-- `scripts/checks.sh` and its matching `scripts/release_0_N_gate.sh` once added;
+- `scripts/checks.sh` and its matching release gate once added;
 - formatting, clippy with warnings denied, unit, integration, documentation,
   property, fuzz, model, and failure-injection tests proportional to scope;
 - `cargo deny check bans licenses sources` and `cargo audit`;
-- API and format compatibility fixtures for every admitted public contract;
-- Linux, macOS, Windows, and practical BSD portability checks for changed
-  platform boundaries;
+- API and format compatibility fixtures for every admitted contract;
+- Linux, macOS, Windows, and practical BSD checks for changed platform boundaries;
 - rootless Podman smoke tests for container or service changes;
-- threat-model, security-control, feature-parity, API, configuration, operator,
-  migration, recovery, and limitation documentation for the change;
-- matching release notes, SBOM, provenance, checksums, signatures, and clean
-  release evidence from the exact source commit.
+- matching documentation, release notes, SBOM, provenance, checksums,
+  signatures, and clean release evidence from the exact source commit.
 
-Every version below has an explicit exit criterion requiring this stop:
+Every version has an explicit exit criterion requiring this stop:
 
 ```text
 vX.Y.Z implementation stop reached. Freeze scope and run the focused pentest
 for this exact commit. Do not tag or begin the next version until findings are
-fixed or documented as accepted residual risk and CI is green.
+fixed or accepted as documented residual risk and CI is green.
 ```
 
 ## Phase 0: Released Foundation
 
 ### 0.1.0 - Repository Foundation
 
-Goal: establish the Rust crate, governance, initial boundaries, and release
-process without storing secrets.
+Goal: establish the Rust crate, governance, initial boundaries, and release process.
 
 Deliverables:
 
-- API, configuration, error, audit, crypto, and storage boundary modules;
+- initial API, config, error, audit, crypto, and storage modules;
 - pinned toolchain, dependency policy, CI, Wolfi placeholders, and local gates;
-- threat model, API shape, portability policy, feature audit, and release docs.
+- threat model, API shape, portability, feature audit, and release documentation.
 
 Verification:
 
 - `scripts/checks.sh`
 - `scripts/release_0_1_gate.sh`
-- foundation API and configuration tests
 
 Exit criteria:
 
-- Foundation scope and known non-implemented security boundaries are explicit.
+- Foundation scope and non-implemented security boundaries are explicit.
 - Focused `0.1.0` pentest passes for the exact tagged commit.
 
-## Phase 1: Architectural Contracts
+## Phase 1: Architecture And Foundational Services
 
-### 0.2.0 - Trust Boundary Corrections
+### 0.2.0 - Workspace, Profiles, And Boundary Reset
 
-Goal: correct prospective design blockers before secret-bearing interfaces
-harden.
+Goal: replace prospective bootstrap interfaces before secret-bearing work starts.
 
 Deliverables:
 
-- ADRs for storage consistency, crypto broker ownership, audit gating, Raft,
-  rollback resistance, cluster identity, and plugin process isolation;
-- typed error taxonomy and capability declarations for security boundaries;
-- corrected quantum-resistant product claim and suite-policy requirements.
+- workspace/crate graph, allowed dependency directions, and isolated platform code;
+- skeleton async/capability storage, crypto-broker, audit, and extension interfaces;
+- core/quantum-resistant/extended feature policy and forbidden combinations;
+- synchronized README, feature parity, architecture, security model, and release plan.
 
 Verification:
 
-- architecture consistency and documentation-link checks;
-- compile tests proving unsupported capabilities fail explicitly.
+- dependency-direction, feature-matrix, compile-fail, and stale-document tests;
+- old synchronous traits are removed or formally deprecated without consumers.
 
 Exit criteria:
 
-- No future core interface depends on the superseded synchronous traits.
-- Focused `0.2.0` architecture pentest passes for the exact release commit.
+- ADRs and skeleton interfaces supersede every bootstrap trust boundary.
+- Focused `0.2.0` architecture and feature-isolation pentest passes.
 
 ### 0.3.0 - Canonical IDs And Paths
 
@@ -146,1483 +169,2221 @@ Goal: give routing, policy, audit, and storage one canonical identity model.
 Deliverables:
 
 - typed vault, namespace, mount, object, key, revision, and operation IDs;
-- segment-aware canonical paths with defined decoding and Unicode behavior;
-- keyed or random opaque storage identifiers that hide logical path shape.
+- segment-aware paths with defined decoding, separators, Unicode, and limits;
+- keyed or random opaque storage identifiers hiding logical path shape.
 
 Verification:
 
-- cross-platform canonical vectors and malformed-path property tests;
-- collision, traversal, separator, normalization, and size-limit tests.
+- cross-platform vectors, parser properties, traversal, collision, and limit tests.
 
 Exit criteria:
 
-- Every subsystem consumes the same typed canonical request identity.
+- Every subsystem consumes the same typed canonical identity.
 - Focused `0.3.0` parser and path-confusion pentest passes.
 
-### 0.4.0 - Storage Capability Contract
+### 0.4.0 - Wire Suite Identity
 
-Goal: define an encrypted record-store contract valid across materially
-different consistency models.
+Goal: define cryptographic wire identity before any persisted format uses it.
 
 Deliverables:
 
-- revision reads, compare-and-swap, atomic batch, and durable acknowledgment;
-- snapshot-consistent paginated iteration and caller-provided read buffers;
-- explicit limits and typed conflict, unavailable, corrupt, unsupported, and
-  indeterminate-commit errors.
+- fixed canonical suite-ID encoding, reserved ranges, and allocation policy;
+- unknown/disabled-suite behavior, key-purpose distinction, format version, and
+  minimum-reader/verifier semantics;
+- provider-neutral KEM, signature, AEAD, hash, and KDF family identifiers.
 
 Verification:
 
-- backend conformance model and linearizable CAS tests;
-- fault tests for partial, duplicate, delayed, and indeterminate commits.
+- canonical vectors, unknown/reserved ID, downgrade, and allocation tests.
 
 Exit criteria:
 
-- Filesystem, SQL, SurrealDB, and Raft semantics can be declared honestly.
-- Focused `0.4.0` storage-contract pentest passes.
+- Persisted formats can authenticate suite identity without choosing providers.
+- Focused `0.4.0` suite-encoding and downgrade pentest passes.
 
-### 0.5.0 - Authenticated Record Format
+### 0.5.0 - Storage Capability Contract
+
+Goal: define authoritative storage across materially different consistency models.
+
+Deliverables:
+
+- revision reads, CAS, atomic batches, and durable acknowledgment;
+- snapshot-consistent pagination and caller-provided or streaming read buffers;
+- typed conflict, unavailable, corrupt, unsupported, and indeterminate errors;
+- backend capability declarations and hard key/value/batch limits.
+
+Verification:
+
+- conformance model, linearizable CAS, partial, duplicate, and delayed commit tests.
+
+Exit criteria:
+
+- Local, SQL, SurrealDB, and Raft semantics can be declared honestly.
+- Focused `0.5.0` storage-contract pentest passes.
+
+### 0.6.0 - Authenticated Record Format
 
 Goal: specify bounded opaque records before implementing durable storage.
 
 Deliverables:
 
-- immutable superblock, fixed header, segmented ciphertext, and commit manifest;
-- authenticated suite, object, generation, key epoch, lengths, and tombstones;
-- encrypted logical index, optional size padding, and versioned migration rules.
+- immutable superblock, fixed header, segments, and commit manifest;
+- authenticated suite, object, generation, key epoch, lengths, and tombstone;
+- encrypted logical index, optional size padding, and migration rules.
 
 Verification:
 
-- canonical format vectors, parser fuzzing, and checked-arithmetic tests;
-- truncation, reorder, substitution, downgrade, and segment-corruption tests.
+- format vectors, parser fuzzing, checked arithmetic, truncation, reorder,
+  substitution, downgrade, and corruption tests.
 
 Exit criteria:
 
-- Parsers allocate nothing from untrusted lengths and never expose logical paths.
-- Focused `0.5.0` format and tampering pentest passes.
+- Parsers allocate nothing from untrusted lengths and reveal no logical paths.
+- Focused `0.6.0` format and tampering pentest passes.
 
-### 0.6.0 - Durable Local Record Store
+### 0.7.0 - Durable Local Storage Backend
 
-Goal: implement a crash-safe single-node backend for authenticated records.
+Goal: implement a crash-safe single-node authoritative backend.
 
 Deliverables:
 
-- atomic manifest publication, fsync policy, lock ownership, and tombstones;
-- snapshot-consistent iteration and bounded compaction;
-- platform-specific durability profiles with explicit weaker guarantees.
+- atomic publication, fsync policy, lock ownership, tombstones, and compaction;
+- snapshot iteration and platform-specific durability profiles;
+- conformance evidence distinguishing persistence from dynamic provider adapters.
 
 Verification:
 
-- crash-point, disk-full, torn-write, stale-lock, and recovery tests;
-- Linux, macOS, Windows, and BSD filesystem fixtures.
+- crash-point, disk-full, torn-write, stale-lock, recovery, and platform tests.
 
 Exit criteria:
 
 - A committed record survives documented crashes or reports indeterminate state.
-- Focused `0.6.0` persistence and rollback pentest passes.
+- Focused `0.7.0` local-storage pentest passes.
 
-### 0.7.0 - Locked Secret Memory
+### 0.8.0 - PostgreSQL Storage Backend
 
-Goal: establish high-assurance secret allocation and input decoding.
-
-Deliverables:
-
-- locked fixed-capacity secret arenas using reviewed `sanitization` facilities;
-- direct bounded Base64/JSON decoding into secret memory without ordinary
-  plaintext `String`, `Bytes`, or `Vec` intermediates;
-- dump, fork, swap, ptrace, guard, and platform-assurance policy.
-
-Verification:
-
-- allocation, residue, lock-failure, bounds, Miri, and platform tests;
-- startup remains sealed when configured memory guarantees cannot be met.
-
-Exit criteria:
-
-- Secret ingress and key storage avoid ordinary heap plaintext by construction.
-- Focused `0.7.0` memory-handling pentest passes.
-
-### 0.8.0 - Crypto Broker And Key Hierarchy
-
-Goal: prevent engines from receiving master keys or broad decrypt capability.
+Goal: implement PostgreSQL as authoritative Lykilheim persistence.
 
 Deliverables:
 
-- serialized broker with opaque, generation-fenced, non-cloneable key handles;
-- domain-separated seal, barrier, token, audit, Transit, PKI, and cluster keys;
-- seal sequence that closes request gates, drains work, clears arenas, and
-  invalidates handles.
+- serializable transactions, revision CAS, atomic batches, and snapshot pagination;
+- durability acknowledgment, schema migration, connection credential isolation;
+- explicit failover, timeout, and indeterminate-commit behavior.
 
 Verification:
 
-- compile-fail capability tests and concurrent seal/use race tests;
-- key-purpose separation and stale-handle property tests.
+- rootless PostgreSQL conformance, fault, failover, migration, and rollback tests.
 
 Exit criteria:
 
-- Key material crosses no engine, task, serialization, or shared-ownership boundary.
-- Focused `0.8.0` key-ownership pentest passes.
+- PostgreSQL storage passes the same opaque-record contract as local storage.
+- Focused `0.8.0` PostgreSQL storage-backend pentest passes.
 
-### 0.9.0 - Algorithm Suite Registry
+### 0.9.0 - SurrealDB Storage Backend
 
-Goal: make every cryptographic object closed-enum, policy-bound, and migratable.
+Goal: implement SurrealDB as authoritative Lykilheim persistence.
 
 Deliverables:
 
-- authenticated suite IDs, profiles, key versions, epochs, contexts, and minimum
-  reader/verifier versions;
-- provider-neutral classical and post-quantum interfaces;
-- downgrade policy, provider self-tests, and algorithm migration state machine.
+- transaction/revision mapping, atomic batches, snapshot pagination, and migrations;
+- capability declaration for every unsupported consistency or durability semantic;
+- credential isolation and outage/retry policy.
 
 Verification:
 
-- unknown-suite, disabled-suite, component-stripping, and downgrade tests;
-- provider differential and known-answer test harnesses.
+- rootless SurrealDB conformance, fault, migration, and indeterminate-commit tests.
 
 Exit criteria:
 
-- Requests cannot select arbitrary algorithms or silently fall back.
-- Focused `0.9.0` crypto-agility pentest passes.
+- SurrealDB never claims guarantees its selected deployment mode lacks.
+- Focused `0.9.0` SurrealDB storage-backend pentest passes.
+
+### 0.10.0 - Secret Taxonomy And Secure Sources
+
+Goal: define handling rules for all secret data and bootstrap credentials.
+
+Deliverables:
+
+- taxonomy for keys, tokens, SecretIDs, passwords, MFA seeds, dynamic credentials,
+  KV plaintext, Transit plaintext, PKI/TLS keys, provider credentials, and plugin I/O;
+- per-class size, owner, copy, lifetime, logging, and clearing rules;
+- `SecretSource` for protected files/FDs, system credentials, interactive input,
+  wrapped references, and explicitly weaker environment variables.
+
+Verification:
+
+- config redaction, debug, CLI rejection, source-permission, and size-bound tests.
+
+Exit criteria:
+
+- No secret-bearing config type is debug-serializable or accepted as a CLI argument.
+- Focused `0.10.0` secret-source and configuration pentest passes.
+
+### 0.11.0 - Locked Secret Memory
+
+Goal: protect decoded application-owned plaintext with honest platform guarantees.
+
+Deliverables:
+
+- locked fixed-capacity arenas using reviewed `sanitization` facilities;
+- direct bounded decoding into secret memory and high-assurance failure policy;
+- dump, fork, swap, ptrace, guard, and platform-assurance documentation.
+
+Verification:
+
+- allocation, residue, lock-failure, bounds, Miri, and platform tests.
+
+Exit criteria:
+
+- Decoded share/key material and application-owned plaintext avoid the ordinary
+  application heap; bounded short-lived transport copies are documented.
+- Focused `0.11.0` memory-handling pentest passes.
+
+### 0.12.0 - Clock And Entropy Services
+
+Goal: centralize time and CSPRNG behavior before state machines depend on them.
+
+Deliverables:
+
+- monotonic durations, persisted wall time, boot/time epoch, uncertainty, and
+  backward-jump degraded mode;
+- deterministic test clock;
+- brokered entropy with health/failure/fork detection and direct secret-buffer fill.
+
+Verification:
+
+- backward/forward jump, reboot, uncertainty, entropy failure, fork, and race tests.
+
+Exit criteria:
+
+- No security subsystem reads ambient clock or randomness directly.
+- Focused `0.12.0` time and entropy pentest passes.
+
+### 0.13.0 - Crypto Broker And Hierarchical Keys
+
+Goal: prevent engines from receiving master keys or broad decrypt authority.
+
+Deliverables:
+
+- serialized broker with opaque generation-fenced non-cloneable handles;
+- domain-separated seal, barrier, token, audit, Transit, PKI, TLS, and cluster keys;
+- per-namespace and per-mount KEKs supporting cryptographic deletion;
+- seal fence that drains work, clears arenas, and invalidates handles.
+
+Verification:
+
+- compile-fail capability, stale-handle, cross-tenant, deletion, and seal-race tests.
+
+Exit criteria:
+
+- Key ownership and cryptographic erasure boundaries are explicit and enforced.
+- Focused `0.13.0` key hierarchy and broker pentest passes.
+
+### 0.14.0 - Provider Registry And Crypto Migration
+
+Goal: bind suite policy to providers without hard-coding one algorithm family.
+
+Deliverables:
+
+- provider capability discovery, self-tests, assurance labels, and closed policy;
+- alternate standardized KEM/signature slots including hash-based signatures;
+- downgrade, provider replacement, key-version, and algorithm migration states.
+
+Verification:
+
+- provider differential, KAT harness, unknown/disabled provider, and migration tests.
+
+Exit criteria:
+
+- Requests cannot choose arbitrary algorithms, providers, or silent fallback.
+- Focused `0.14.0` crypto-agility pentest passes.
 
 ## Phase 2: Seal And Barrier
 
-### 0.10.0 - Symmetric Barrier Core
+### 0.15.0 - Symmetric Barrier Core
 
 Goal: encrypt authenticated segmented records behind the broker.
 
 Deliverables:
 
-- AEAD barrier with deterministic domain-separated nonce derivation;
-- bounded in-place encrypt/decrypt paths and authenticated metadata;
-- sealed-state gate and indistinguishable authentication failures.
+- AEAD barrier with domain-separated nonce derivation and authenticated metadata;
+- bounded in-place encrypt/decrypt paths and sealed-state gate;
+- indistinguishable authentication and corruption failures.
 
 Verification:
 
-- KAT, round-trip, nonce uniqueness, tamper, oracle, and large-record tests;
-- restart tests proving the backend observes ciphertext only.
+- KAT, round-trip, nonce uniqueness, tamper, oracle, and large-record tests.
 
 Exit criteria:
 
-- No plaintext or unauthenticated metadata reaches raw storage.
-- Focused `0.10.0` barrier pentest and cryptographic review pass.
+- No plaintext or unauthenticated metadata reaches authoritative storage.
+- Focused `0.15.0` barrier pentest and cryptographic review pass.
 
-### 0.11.0 - Initialization And Shamir Shares
+### 0.16.0 - Initialization And Shamir Shares
 
 Goal: initialize a vault and split its seal secret without unsafe copies.
 
 Deliverables:
 
-- entropy health handling and direct locked-memory seal-secret generation;
-- versioned shares bound to vault UUID, generation, threshold, total, and index;
-- wrapped immutable keyring with authenticated reconstruction canary.
+- entropy health handling and locked-memory seal-secret generation;
+- shares bound to vault, generation, threshold, total, and index;
+- wrapped immutable keyring and authenticated reconstruction canary;
+- atomic uninitialized-to-initializing state foundation with one active attempt.
 
 Verification:
 
-- threshold, entropy failure, duplicate index, corrupt share, and residue tests;
-- deterministic format vectors without deterministic secret generation.
+- threshold, entropy, duplicate, corruption, concurrency, and residue tests.
 
 Exit criteria:
 
 - Initialization persists no share or reconstructed seal secret.
-- Focused `0.11.0` initialization and share-handling pentest passes.
+- Focused `0.16.0` initialization and share-handling pentest passes.
 
-### 0.12.0 - Bounded Unseal Lifecycle
+### 0.17.0 - Bounded Unseal Lifecycle
 
-Goal: reconstruct keys through one replay-resistant, expiring unseal attempt.
+Goal: reconstruct keys through one replay-resistant expiring attempt.
 
 Deliverables:
 
-- collector bound to vault UUID, attempt nonce, seal generation, and TTL;
-- duplicate-safe fixed slots and direct secret-memory request decoder;
-- reconstruction, keyring verification, immediate clearing, and cancellation.
+- collector bound to vault, nonce, seal generation, TTL, and hard attempt limits;
+- fixed slots, direct secret-memory decoder, verification, clearing, and cancellation;
+- fixed-length binary unseal content type and local console/Unix-socket option;
+- documented bounded TLS/socket/HTTP encoded transport copies.
 
 Verification:
 
-- replay, mixed-generation, timeout, concurrency, crash, and oracle tests;
-- sealed request-gate and memory-residue tests.
+- replay, mixed generation, timeout, concurrency, crash, oracle, and residue tests.
 
 Exit criteria:
 
 - Invalid submissions reveal no share validity and leave no reusable partial state.
-- Focused `0.12.0` unseal pentest passes.
+- Focused `0.17.0` unseal transport and lifecycle pentest passes.
 
-### 0.13.0 - Crash-Safe Shamir Rekey
+### 0.18.0 - Crash-Safe Shamir Rekey
 
-Goal: change seal shares without mixing generations or creating crash ambiguity.
+Goal: change seal shares without mixing generations or crash ambiguity.
 
 Deliverables:
 
-- idle, old-quorum, pending-new, committed, and cancelled rekey states;
-- generation-bound share verification and resumable cancellation;
-- recovery and root-token quorum workflow foundations.
+- idle, old-quorum, pending-new, committed, and cancelled states;
+- generation-bound verification, hard attempt limits, recovery, and cancellation;
+- modelled crash and restart behavior.
 
 Verification:
 
-- crash at every transition, stale share, replay, cancel, and restart tests;
-- state-machine model checking for generation mixing.
+- crash at every transition, stale share, replay, cancel, and model tests.
 
 Exit criteria:
 
-- Recovery always accepts one explicitly committed generation only.
-- Focused `0.13.0` rekey and recovery pentest passes.
+- Recovery accepts one explicitly committed generation only.
+- Focused `0.18.0` rekey pentest passes.
 
-### 0.14.0 - Barrier Rotation And Rewrap
+### 0.19.0 - Barrier Rotation And Rewrap
 
-Goal: separate key rotation, rewrap, rekey, and suite migration lifecycles.
+Goal: separate rotation, rewrap, rekey, and suite migration lifecycles.
 
 Deliverables:
 
-- immediate new-write epoch rotation with old decrypt-only epochs;
-- bounded resumable DEK and keyring rewrap with progress evidence;
-- generation-safe pause, restart, rollback, and retirement rules.
+- immediate new-write epoch and old decrypt-only epochs;
+- bounded resumable rewrap with progress evidence;
+- pause, restart, rollback, retirement, and cryptographic deletion rules.
 
 Verification:
 
-- concurrent read/write, crash, mixed epoch, rollback, and retirement tests;
-- migration from every admitted barrier format.
+- concurrent I/O, crash, mixed epoch, rollback, retirement, and migration tests.
 
 Exit criteria:
 
 - Rotation cannot strand ciphertext or reactivate retired write keys.
-- Focused `0.14.0` rotation and rewrap pentest passes.
+- Focused `0.19.0` rotation and rewrap pentest passes.
 
-## Phase 3: Request, Audit, And Policy
+## Phase 3: API, Transport, Audit, And Policy
 
-### 0.15.0 - Canonical API Router
+### 0.20.0 - Canonical API And Concurrency Contract
 
-Goal: route every request through one typed, bounded security pipeline.
+Goal: define one bounded API pipeline before exposing network endpoints.
 
 Deliverables:
 
-- versioned Axum routes, request IDs, body limits, and stable errors;
-- one-pass normalization into namespace, mount, path, operation, and context;
-- sealed/unsealed and method/path allowlists with API specification fixtures.
+- typed routes, request IDs, body limits, stable errors, and one-pass normalization;
+- idempotency keys, ETags/revisions, replay result retention, cancellation,
+  pagination snapshot tokens, and `IndeterminateCommit`;
+- local/test-only listeners until native TLS is complete.
 
 Verification:
 
-- malformed HTTP, normalization, smuggling, body-limit, and route tests;
-- API compatibility smoke for all admitted endpoints.
+- malformed HTTP, normalization, replay, concurrency, pagination, and smuggling tests.
 
 Exit criteria:
 
-- Policy, audit, routing, and storage see exactly the same request identity.
-- Focused `0.15.0` HTTP and routing pentest passes.
+- Every mutation and page has explicit retry and concurrency semantics.
+- Focused `0.20.0` API parser and idempotency pentest passes.
 
-### 0.16.0 - Bounded Layered Rate Control
+### 0.21.0 - Native API TLS
 
-Goal: replace the process-local unbounded IP limiter with configurable controls.
+Goal: secure every network-accessible client endpoint before secret APIs ship.
 
 Deliverables:
 
-- fixed-point refill, injected clock, bounded sharded state, and eviction;
-- global, network, endpoint, credential, token, and namespace layers;
-- trusted-proxy rules, IPv6 aggregation, and separate durable lockout.
+- reviewed rustls/provider choice and TLS 1.3-only production policy;
+- certificate reload, SNI/listener separation, trusted proxies, and client IP rules;
+- HTTP/2 limits, connection deadlines, TLS-key secret memory, and downgrade policy.
 
 Verification:
 
-- deterministic clock, cardinality, proxy spoofing, fairness, and DoS tests;
-- config validation for every positive rate, burst, and memory limit.
+- protocol downgrade, SNI, reload, proxy spoofing, slow connection, and H2 DoS tests.
+
+Exit criteria:
+
+- Unseal, login, token, and secret routes cannot bind publicly without approved TLS.
+- Focused `0.21.0` public API transport pentest passes.
+
+### 0.22.0 - Bounded Layered Rate Control
+
+Goal: replace unbounded process-local IP limiting with configurable controls.
+
+Deliverables:
+
+- fixed-point refill, shared clock, bounded sharded state, and eviction;
+- global, network, endpoint, credential, token, and namespace layers;
+- trusted proxy, IPv6 aggregation, cardinality caps, and durable lockout separation.
+
+Verification:
+
+- deterministic time, spoofing, cardinality, fairness, eviction, and DoS tests.
 
 Exit criteria:
 
 - Untrusted clients cannot cause unbounded limiter work or memory growth.
-- Focused `0.16.0` rate-limit and proxy pentest passes.
+- Focused `0.22.0` rate-control pentest passes.
 
-### 0.17.0 - Typed Durable Audit Journal
+### 0.23.0 - Typed Durable Audit Journal
 
-Goal: make security audit intent durable without blocking async executors.
+Goal: durably record security intent without blocking async executors.
 
 Deliverables:
 
-- typed intent/result schema, redaction registry, sequence, actor, namespace,
-  policy revision, phase, and outcome;
-- bounded dedicated writer process or isolated thread pool with durable journal;
+- typed intent/result schema, redaction registry, sequence, actor, policy, and outcome;
+- bounded dedicated writer process or isolated pool with durable journal;
 - one-way `AuditUnavailable` gate and restricted repair state.
 
 Verification:
 
-- disk-full, queue-full, fsync, timeout, panic, corruption, and restart tests;
-- schema redaction and deterministic hash tests.
+- disk/queue full, fsync, timeout, panic, corruption, restart, and redaction tests.
 
 Exit criteria:
 
-- Audit writer failure cannot starve health or manual seal control paths.
-- Focused `0.17.0` audit durability and leakage pentest passes.
+- Writer failure cannot starve health or manual seal control paths.
+- Focused `0.23.0` audit durability and leakage pentest passes.
 
-### 0.18.0 - Fail-Closed Audit Transaction Gate
+### 0.24.0 - Fail-Closed Audit Transaction Gate
 
 Goal: prevent mutation or secret release before required audit evidence commits.
 
 Deliverables:
 
-- bounded intent, operation, result, commit/release request pipeline;
-- transactional encrypted mutation plus audit outbox where supported;
-- withheld response buffers and idempotent asynchronous sink export.
+- bounded intent, operation, result, and commit/release pipeline;
+- transactional mutation plus audit outbox where supported;
+- withheld responses and idempotent asynchronous sink export.
 
 Verification:
 
-- failure injection at every gate and mutation/audit atomicity tests;
-- proof that no secret byte streams before durable acknowledgment.
+- failure injection at every gate and mutation/audit atomicity tests.
 
 Exit criteria:
 
-- Audit failure blocks all secret-bearing reads and security mutations.
-- Focused `0.18.0` audit-bypass and partial-commit pentest passes.
+- Audit failure blocks secret-bearing reads and security mutations.
+- Focused `0.24.0` audit bypass and partial-commit pentest passes.
 
-### 0.19.0 - Policy Compiler And Evaluator
+### 0.25.0 - Policy Compiler And Evaluator
 
 Goal: enforce deterministic default-deny capabilities over canonical requests.
 
 Deliverables:
 
-- segment-aware `*` and `**`, explicit deny precedence, and constraints;
-- immutable policy revisions, shadowing warnings, and system-path restrictions;
-- deterministic evaluator with resource budgets and no ambient inputs.
+- segment wildcards, deny precedence, constraints, and immutable revisions;
+- shadowing warnings, system-path restrictions, and hard rule/work budgets;
+- deterministic evaluator with no ambient clock, network, or filesystem input.
 
 Verification:
 
-- golden policy matrix, fuzzing, TOCTOU, overlap, and budget tests;
-- namespace escape and contradictory-rule tests.
+- golden matrices, fuzzing, TOCTOU, overlap, escape, and budget tests.
 
 Exit criteria:
 
 - Every protected operation binds to one immutable policy revision.
-- Focused `0.19.0` policy bypass and ambiguity pentest passes.
+- Focused `0.25.0` policy bypass and ambiguity pentest passes.
 
-### 0.20.0 - Mounts And Barrier Views
+### 0.26.0 - Mounts And Barrier Views
 
-Goal: isolate engines by immutable mount identity and lifecycle.
-
-Deliverables:
-
-- enable, disable, tune, remount, conflict, and capability APIs;
-- per-mount barrier views with no cross-mount traversal;
-- generation-aware lease revocation on disable or remount.
-
-Verification:
-
-- conflict, race, cross-view, remount, and cascade tests;
-- API compatibility fixtures and audit assertions.
-
-Exit criteria:
-
-- A mount cannot access another mount's namespace, storage, keys, or leases.
-- Focused `0.20.0` mount-isolation pentest passes.
-
-### 0.21.0 - Response Wrapping And Cubbyhole
-
-Goal: provide at-most-once secret delivery and token-private storage.
+Goal: isolate engines by immutable mount identity and lifecycle contract.
 
 Deliverables:
 
-- random wrapping token, independent payload DEK, lookup, rewrap, and unwrap;
-- atomic consumed state with documented network-failure semantics;
-- cubbyhole rooted by immutable token ID and erased on revocation.
+- enable, disable, tune, remount, conflict, revision, and hard mount limits;
+- per-mount barrier views and KEKs with no cross-mount traversal;
+- lease-revocation contract for integration after the lease engine exists.
 
 Verification:
 
-- replay, race, expiry, disconnect, rewrap, isolation, and cleanup tests;
-- no bearer token is ever used as an encryption key.
+- conflict, race, cross-view, remount, deletion, and cryptographic-erasure tests.
 
 Exit criteria:
 
-- Wrapping is auditable, at-most-once, and cross-token isolated.
-- Focused `0.21.0` wrapping and cubbyhole pentest passes.
+- A mount cannot access another mount's storage, keys, namespace, or authority.
+- Focused `0.26.0` mount-isolation pentest passes.
 
-## Phase 4: Tokens, Leases, Identity, And Auth
+## Phase 4: Tokens, Bootstrap, Leases, And Static Secrets
 
-### 0.22.0 - Token Engine
+### 0.27.0 - Token Engine
 
 Goal: issue independently random tokens with atomic lifecycle semantics.
 
 Deliverables:
 
-- versioned 256-bit bearer format, keyed lookup digest, and random accessor;
-- child, orphan, periodic, service, and batch-mode decisions;
-- immutable namespace, parent, max TTL, and policy-revision bindings.
+- versioned 256-bit bearer, keyed lookup digest, and random accessor;
+- child, orphan, periodic, service, and batch mode decisions;
+- immutable namespace, parent, TTL, policy, per-parent, and per-namespace bounds.
 
 Verification:
 
-- forgery, prefix, accessor, clock rollback, renewal, and revocation-race tests;
-- indistinguishable invalid, missing, expired, and revoked errors.
+- forgery, prefix, accessor, clock rollback, renewal, cascade, and race tests.
 
 Exit criteria:
 
 - Revocation wins every authorization and renewal race.
-- Focused `0.22.0` token pentest passes.
+- Focused `0.27.0` token pentest passes.
 
-### 0.23.0 - Lease And Expiration Engine
+### 0.28.0 - Bootstrap, Root, And Recovery Tokens
 
-Goal: make dynamic credential leases durable, idempotent, and recoverable.
+Goal: complete initialization and quorum-controlled administrative bootstrap.
+
+Deliverables:
+
+- initialized-state CAS preventing concurrent init races;
+- local-only bootstrap channel or one-time out-of-band nonce;
+- atomic first policy/admin and initial root token issuance;
+- generate-root, recovery-token, cancel, replay, expiry, and root revocation states.
+
+Verification:
+
+- concurrent init, nonce theft, partial bootstrap, quorum, cancel, and revoke tests.
+
+Exit criteria:
+
+- Uninitialized-to-initialized transition and first authority commit exactly once.
+- Focused `0.28.0` bootstrap/root/recovery pentest passes.
+
+### 0.29.0 - Lease And Expiration Engine
+
+Goal: make dynamic leases durable, idempotent, bounded, and recoverable.
 
 Deliverables:
 
 - issue, renew, revoke, cascade, intent, result, and compensation states;
-- bounded expiration worker with restart recovery;
-- synchronous expiry enforcement independent of cleanup timing.
+- bounded expiration worker, active/pending limits, and restart recovery;
+- mount disable/remount revocation integration and synchronous expiry checks.
 
 Verification:
 
-- simulated time, upstream outage, partial creation, cascade, and restart tests;
-- generation-aware idempotency and clock-rollback tests.
+- simulated time, outage, partial create, cascade, mount, restart, and race tests.
 
 Exit criteria:
 
-- No cleanup delay or crash extends authorization beyond its durable lease.
-- Focused `0.23.0` lease lifecycle pentest passes.
+- Cleanup delay or crash cannot extend durable authorization.
+- Focused `0.29.0` lease lifecycle pentest passes.
 
-### 0.24.0 - KV v2
+### 0.30.0 - Response Wrapping And Cubbyhole
 
-Goal: deliver useful versioned static secret storage.
+Goal: provide at-most-once delivery and token-private storage after tokens exist.
 
 Deliverables:
 
-- CAS writes, versions, metadata, list, and maximum-version retention;
-- soft delete, undelete, irreversible destroy, and created-by metadata;
-- bounded payloads, encrypted indexes, and migration fixtures.
+- random wrapping token, independent payload DEK, lookup, rewrap, and unwrap;
+- atomic consumed state, expiry, hard pending limits, and network failure semantics;
+- cubbyhole rooted by immutable token ID and erased on revocation.
 
 Verification:
 
-- compatibility, concurrent CAS, history, metadata disclosure, and destroy tests;
-- init-to-KV API smoke through restart and seal/unseal.
+- replay, race, disconnect, rewrap, isolation, quota, and cleanup tests.
 
 Exit criteria:
 
-- KV semantics remain atomic and reveal no forbidden historical data.
-- Focused `0.24.0` KV v2 pentest passes.
+- Wrapping is at-most-once and Cubbyhole is cross-token isolated.
+- Focused `0.30.0` wrapping and Cubbyhole pentest passes.
 
-### 0.25.0 - Identity Entities And Groups
+### 0.31.0 - KV v2
 
-Goal: attach policy to stable identities rather than transient login records.
+Goal: deliver bounded versioned static secret storage.
+
+Deliverables:
+
+- CAS, versions, metadata, list, per-secret versions, and total-byte bounds;
+- soft delete, undelete, and cryptographic destroy through key destruction;
+- explicit SSD, copy-on-write, replica, snapshot, and backup retention limitations.
+
+Verification:
+
+- compatibility, CAS, history, metadata, key destruction, and retention tests.
+
+Exit criteria:
+
+- Destroy removes active logical recovery while documenting physical limitations.
+- Focused `0.31.0` KV v2 pentest passes.
+
+### 0.32.0 - Identity Entities And Groups
+
+Goal: attach policy to bounded stable identities rather than login records.
 
 Deliverables:
 
 - entities, aliases, groups, metadata, merge, and policy attachment;
-- immutable IDs, cycle rejection, depth bounds, and visited-set evaluation;
-- audit-safe identity resolution and alias uniqueness rules.
+- immutable IDs, cycle/depth/membership limits, and visited-set evaluation;
+- audit-safe resolution and alias uniqueness.
 
 Verification:
 
-- cycle, depth, alias collision, merge, isolation, and race tests;
-- identity-policy golden matrices.
+- cycle, depth, cardinality, alias collision, merge, isolation, and race tests.
 
 Exit criteria:
 
-- Group traversal is bounded and cannot grant cross-identity authority.
-- Focused `0.25.0` identity and group pentest passes.
+- Group traversal cannot grant cross-identity authority or exhaust evaluation.
+- Focused `0.32.0` identity and group pentest passes.
 
-### 0.26.0 - Namespace Isolation
+### 0.33.0 - Namespace Isolation
 
-Goal: enforce hierarchical tenant isolation and delegated administration.
+Goal: enforce hierarchical tenant isolation and cryptographic deletion.
 
 Deliverables:
 
-- child namespaces, root-only system paths, quotas hooks, and policy inheritance;
-- namespace-bound identity, token, mount, storage, lease, and audit views;
-- explicit cross-namespace administration and deletion workflows.
+- child namespaces, root-only paths, hard limits, and policy inheritance;
+- namespace-bound identity, token, mount, storage, lease, audit, and KEKs;
+- delegated administration and deletion workflow.
 
 Verification:
 
-- cross-tenant matrix, deletion, inheritance, confused-deputy, and quota tests;
-- namespace value is always derived from stored authority, never a header alone.
+- cross-tenant, deletion, inheritance, confused-deputy, and limit tests.
 
 Exit criteria:
 
-- No tenant can enumerate, infer, or operate on another tenant's resources.
-- Focused `0.26.0` namespace isolation pentest passes.
+- No tenant can enumerate or operate on another tenant's resources.
+- Focused `0.33.0` namespace isolation pentest passes.
 
-### 0.27.0 - AppRole Authentication
+### 0.34.0 - AppRole Authentication
 
 Goal: provide replay-resistant machine authentication.
 
 Deliverables:
 
-- RoleID and SecretID with TTL, uses, CIDR, accessor, wrapping, and revocation;
-- durable atomic use consumption and role-bound token issuance;
-- bootstrap, rotation, and least-privilege operator workflows.
+- RoleID and SecretID TTL, uses, CIDR, accessor, wrapping, and revocation;
+- bounded atomic consumption and role-bound issuance;
+- bootstrap, rotation, least-privilege, and redaction workflows.
 
 Verification:
 
-- replay, race, CIDR/proxy, wrap, brute-force, and revocation tests;
-- audit redaction and rate-limit conformance.
+- replay, race, CIDR/proxy, brute-force, quota, and revoke tests.
 
 Exit criteria:
 
-- SecretID use and token issuance cannot partially commit or be replayed.
-- Focused `0.27.0` AppRole pentest passes.
+- SecretID consumption and token issuance cannot partially commit.
+- Focused `0.34.0` AppRole pentest passes.
 
-### 0.28.0 - Userpass And Password Policy
+### 0.35.0 - Userpass And Password Policy
 
-Goal: support local human authentication with explicit production guardrails.
+Goal: support local human authentication with production guardrails.
 
 Deliverables:
 
-- Argon2id policy, password generation rules, lockout, unlock, and recovery;
-- bootstrap/development defaults and production enablement warnings;
-- identity, MFA hook, audit redaction, and rate-control integration.
+- Argon2id policy, generated-password rules, lockout, unlock, and recovery;
+- identity/MFA hooks, bounded users/attempts, redaction, and dev-only defaults.
 
 Verification:
 
-- offline cost, brute-force, lockout DoS, enumeration, and migration tests;
-- password-policy and recovery-path fixtures.
+- offline cost, brute force, lockout DoS, enumeration, and migration tests.
 
 Exit criteria:
 
 - User enumeration and lockout cannot bypass policy or disclose credentials.
-- Focused `0.28.0` userpass pentest passes.
+- Focused `0.35.0` userpass pentest passes.
 
-### 0.29.0 - JWT, OIDC, And TLS Certificate Auth
+## Phase 5: Native Egress And Authentication Assurance
 
-Goal: support standards-based human and workload identity.
+### 0.36.0 - Native Outbound Capability Broker
 
-Deliverables:
-
-- static/JWKS JWT validation, discovery pinning, claims, audiences, and clock rules;
-- OIDC browser/device flow decisions and callback protection;
-- mTLS client certificate auth with chain, SAN, EKU, and revocation policy.
-
-Verification:
-
-- algorithm confusion, JWKS rotation, SSRF, nonce/state, replay, and CRL tests;
-- identity alias collision and claim-bound policy tests.
-
-Exit criteria:
-
-- External identity cannot select validation keys, algorithms, or namespaces.
-- Focused `0.29.0` federated and certificate-auth pentest passes.
-
-### 0.30.0 - Kubernetes And Cloud Workload Auth
-
-Goal: authenticate workloads without long-lived ambient credentials.
+Goal: centralize all native provider and HTTP/database egress.
 
 Deliverables:
 
-- Kubernetes TokenReview and offline service-account JWT modes;
-- AWS, Azure, and GCP workload identity adapters;
-- audience, project, cluster, account, nonce, and replay bindings.
+- destination handles; DNS/rebinding, loopback, link-local, metadata, private-range,
+  Unix-socket, proxy, redirect, TLS-root/pin, and address policy;
+- body/response limits, pools, deadlines, retry/idempotency classes, and redacted diagnostics;
+- reviewed database connector boundary using the same destination authority.
 
 Verification:
 
-- metadata SSRF, confused deputy, stale identity, replay, and outage tests;
-- local Kubernetes fixtures and provider protocol vectors.
+- SSRF, DNS rebinding, proxy bypass, redirect, pool exhaustion, and retry tests.
 
 Exit criteria:
 
-- Workload identity is bound to an explicit trust domain and role.
-- Focused `0.30.0` workload-auth pentest passes.
+- Native integrations cannot instantiate arbitrary outbound clients.
+- Focused `0.36.0` egress and SSRF pentest passes.
 
-### 0.31.0 - Enterprise Auth And MFA
+### 0.37.0 - Authentication Assurance Model
 
-Goal: complete the planned authentication families before stable freeze.
+Goal: let policy distinguish how strongly an identity was authenticated.
 
 Deliverables:
 
-- LDAP, Kerberos, RADIUS, and GitHub/OIDC-compatible operator auth;
-- identity-bound TOTP/WebAuthn-style MFA framework after dependency review;
-- per-method lockout, group mapping, TLS, channel-binding, and limitations docs.
+- local-secret, classical assertion, hybrid/PQ-bound, hardware-attested, and
+  MFA/approval-strengthened assurance labels;
+- immutable result binding to identity, method, issuer, context, and expiry;
+- minimum-assurance policy constraints for protected roles.
 
 Verification:
 
-- protocol replay, downgrade, group injection, MFA bypass, and outage tests;
-- rootless integration fixtures where practical.
+- label escalation, method confusion, stale assertion, and policy matrix tests.
 
 Exit criteria:
 
-- Every enabled method has bounded inputs, redacted audit, and revoke semantics.
-- Focused `0.31.0` enterprise-auth and MFA pentest passes.
+- Successful authentication cannot imply assurance the upstream did not provide.
+- Focused `0.37.0` assurance-label pentest passes.
 
-## Phase 5: Cryptographic Engines
+### 0.38.0 - JWT Authentication
 
-### 0.32.0 - Transit Classical Baseline
+Goal: validate bounded JWT assertions through explicit issuer policy.
+
+Deliverables:
+
+- static/JWKS keys, algorithms, claims, audiences, clocks, and issuer binding;
+- egress-brokered JWKS fetch, rotation, cache limits, and assurance labels.
+
+Verification:
+
+- algorithm/key confusion, JWKS SSRF/rotation, replay, clock, and claim tests.
+
+Exit criteria:
+
+- Tokens cannot select validation algorithms, keys, namespaces, or assurance.
+- Focused `0.38.0` JWT pentest passes.
+
+### 0.39.0 - OIDC Authentication
+
+Goal: support browser/device login without weakening JWT validation.
+
+Deliverables:
+
+- discovery pinning, authorization code/device flows, PKCE, state, nonce, and callback;
+- bounded sessions, issuer mapping, logout, and identity aliases.
+
+Verification:
+
+- state/nonce replay, callback confusion, discovery SSRF, mix-up, and session tests.
+
+Exit criteria:
+
+- OIDC flow authority remains bound to its configured issuer and callback.
+- Focused `0.39.0` OIDC pentest passes.
+
+### 0.40.0 - TLS Certificate Authentication
+
+Goal: authenticate mTLS clients independently from API transport setup.
+
+Deliverables:
+
+- chain, SAN, EKU, name constraints, CRL/OCSP policy, and role mapping;
+- certificate rotation, revocation caching, bounded chains, and assurance result.
+
+Verification:
+
+- chain confusion, revoked cert, SAN/EKU bypass, cache, and mapping tests.
+
+Exit criteria:
+
+- Transport success alone never grants certificate-auth identity.
+- Focused `0.40.0` TLS certificate-auth pentest passes.
+
+### 0.41.0 - Kubernetes Authentication
+
+Goal: authenticate Kubernetes workloads within explicit trust domains.
+
+Deliverables:
+
+- TokenReview and offline service-account JWT modes through native egress;
+- cluster, audience, namespace, service account, cache, and assurance binding.
+
+Verification:
+
+- replay, stale token, cluster confusion, reviewer compromise, and outage tests.
+
+Exit criteria:
+
+- Kubernetes identity cannot escape its configured cluster trust domain.
+- Focused `0.41.0` Kubernetes-auth pentest passes.
+
+### 0.42.0 - Cloud Workload Authentication
+
+Goal: authenticate AWS, Azure, and GCP workloads without ambient credentials.
+
+Deliverables:
+
+- separate provider protocols through native egress and metadata protection;
+- account/project/tenant, audience, role, nonce, replay, and assurance binding.
+
+Verification:
+
+- metadata SSRF, confused deputy, stale identity, replay, and provider outage tests.
+
+Exit criteria:
+
+- Cloud identity is bound to an explicit provider trust domain and role.
+- Focused `0.42.0` cloud-workload-auth pentest passes.
+
+### 0.43.0 - LDAP Authentication
+
+Goal: add bounded LDAP user/group authentication.
+
+Deliverables:
+
+- TLS, bind/search strategy, filters, group mapping, lockout, and assurance labels;
+- egress destination controls and bounded result/cardinality handling.
+
+Verification:
+
+- filter injection, group escalation, downgrade, outage, and enumeration tests.
+
+Exit criteria:
+
+- LDAP results cannot inject identity, groups, namespace, or policy.
+- Focused `0.43.0` LDAP-auth pentest passes.
+
+### 0.44.0 - Kerberos Authentication
+
+Goal: add channel-bound Kerberos authentication after dependency review.
+
+Deliverables:
+
+- realm/service mapping, replay cache, channel binding, delegation policy, and limits;
+- identity aliases, assurance result, and keytab `SecretSource` handling.
+
+Verification:
+
+- replay, downgrade, delegation, realm confusion, and keytab leakage tests.
+
+Exit criteria:
+
+- Kerberos delegation cannot silently become broader vault authority.
+- Focused `0.44.0` Kerberos-auth pentest passes.
+
+### 0.45.0 - RADIUS Authentication
+
+Goal: add bounded RADIUS authentication with explicit transport limitations.
+
+Deliverables:
+
+- server, shared-secret, attribute, timeout, replay, and failover policy;
+- identity mapping, rate control, assurance labels, and MFA interaction.
+
+Verification:
+
+- replay, response spoofing, downgrade, failover, and enumeration tests.
+
+Exit criteria:
+
+- RADIUS limitations and assurance are visible to policy and operators.
+- Focused `0.45.0` RADIUS-auth pentest passes.
+
+### 0.46.0 - GitHub Authentication
+
+Goal: support bounded GitHub operator auth where OIDC is not suitable.
+
+Deliverables:
+
+- organization/team mapping, token verification, egress policy, and cache bounds;
+- identity aliases, revocation, rate-limit, and assurance behavior.
+
+Verification:
+
+- org/team confusion, stale membership, token leakage, outage, and cache tests.
+
+Exit criteria:
+
+- GitHub availability or stale membership cannot silently grant authority.
+- Focused `0.46.0` GitHub-auth pentest passes.
+
+### 0.47.0 - Multi-Factor Authentication
+
+Goal: strengthen identities with policy-bound second factors.
+
+Deliverables:
+
+- TOTP and WebAuthn-style factors, enrollment, recovery, replay, and lifecycle;
+- bounded challenges, assurance elevation, anti-phishing distinctions, and audit.
+
+Verification:
+
+- enrollment takeover, replay, downgrade, recovery abuse, and factor-removal tests.
+
+Exit criteria:
+
+- MFA assurance cannot outlive or detach from the authenticated identity/session.
+- Focused `0.47.0` MFA pentest passes.
+
+## Phase 6: Cryptographic Engines And Protected Transport
+
+### 0.48.0 - Transit Classical Baseline
 
 Goal: provide symmetric cryptographic services without exporting raw keys.
 
 Deliverables:
 
-- create, encrypt, decrypt, rewrap, rotate, key-version, hash, HMAC, and random;
-- derived key and datakey APIs with convergent encryption disabled by default;
-- strict contexts, minimum encrypt/decrypt versions, and opaque key handles.
+- create, encrypt, decrypt, rewrap, rotate, version, hash, HMAC, and random;
+- derived/datakey APIs, bounded batches, contexts, and opaque handles;
+- convergent encryption disabled by default.
 
 Verification:
 
-- KAT, misuse, wrong context, old-version, oracle, rotation, and fuzz tests;
-- API compatibility and audit-redaction fixtures.
+- KAT, misuse, context, old-version, oracle, rotation, and fuzz tests.
 
 Exit criteria:
 
-- Transit never exposes key material or silently weakens policy.
-- Focused `0.32.0` Transit pentest and crypto review pass.
+- Transit never exports keys or silently weakens policy.
+- Focused `0.48.0` Transit pentest and crypto review pass.
 
-### 0.33.0 - Post-Quantum Provider Baseline
+### 0.49.0 - Post-Quantum Provider Baseline
 
-Goal: admit reviewed ML-KEM and ML-DSA implementations as production-capable
-providers.
+Goal: admit production-capable PQ providers without structural monoculture.
 
 Deliverables:
 
-- ML-KEM-768/1024 and ML-DSA-65/87 provider profiles;
-- KATs, differential tests, self-tests, locked-key generation, and fault checks;
-- exact dependency, feature, CPU, memory, and pre-auth DoS policy.
+- ML-KEM-768/1024 and ML-DSA-65/87 profiles;
+- SLH-DSA-style offline root/checkpoint profile and alternate-family extension slots;
+- KATs, differential/self-tests, locked generation, fault checks, and DoS budgets.
 
 Verification:
 
-- NIST vectors, malformed inputs, implicit rejection, side-channel review, and
-  provider differential campaigns.
+- NIST vectors, malformed input, implicit rejection, differential, and fault tests.
 
 Exit criteria:
 
-- PQ algorithms are no longer research placeholders and fail closed on self-test.
-- Focused `0.33.0` independent PQ provider pentest and crypto review pass.
+- PQ providers fail closed and remain replaceable by suite policy.
+- Focused `0.49.0` independent PQ-provider pentest and crypto review pass.
 
-### 0.34.0 - Hybrid Transit Envelopes
+### 0.50.0 - Hybrid Transit Envelopes
 
-Goal: combine classical and post-quantum protection without downgrade paths.
+Goal: combine classical and PQ protection without downgrade paths.
 
 Deliverables:
 
-- versioned KEM+DEM envelope binding both shared secrets, public keys, suite,
-  recipient, key version, ciphertext, and application context;
+- KEM+DEM transcript binding both secrets, keys, suite, recipient, version, and context;
 - X25519 all-zero rejection and indistinguishable decapsulation errors;
-- dual classical plus ML-DSA signing requiring both under hybrid policy.
+- dual classical/PQ signatures requiring both under hybrid policy.
 
 Verification:
 
-- component stripping, malformed component, context swap, downgrade, and KATs;
-- harvest-now-decrypt-later threat-model evidence.
+- stripping, malformed component, context swap, downgrade, and KATs.
 
 Exit criteria:
 
 - Hybrid policy never accepts either component alone or retries classical-only.
-- Focused `0.34.0` hybrid-envelope pentest and crypto review pass.
+- Focused `0.50.0` hybrid-envelope pentest and crypto review pass.
 
-### 0.35.0 - Classical PKI Core
+### 0.51.0 - Hybrid Public API Transport
+
+Goal: protect ordinary client-to-vault traffic with the quantum-resistant profile.
+
+Deliverables:
+
+- pinned X25519+ML-KEM TLS KEX profile and exact draft/version migration path;
+- hybrid/PQ server identity policy where ecosystem support permits;
+- protected profile requiring hybrid transport with no classical fallback.
+
+Verification:
+
+- downgrade, stripping, interop, load, certificate, resumption, and rotation tests.
+
+Exit criteria:
+
+- Protected secret endpoints reject connections below configured hybrid assurance.
+- Focused `0.51.0` public hybrid-transport pentest and crypto review pass.
+
+### 0.52.0 - Classical PKI Core
 
 Goal: issue constrained classical certificates through isolated PKI keys.
 
 Deliverables:
 
-- root/intermediate issuers, CSR signing, roles, SAN/EKU/path/TTL constraints;
-- issuer rotation, CRL, OCSP, and revocation lifecycle;
-- key-purpose isolation and audited operator workflows.
+- root/intermediate issuers, CSR signing, SAN/EKU/path/TTL roles;
+- issuer rotation, CRL, OCSP, revocation, and bounded issuance.
 
 Verification:
 
-- chain, role bypass, SAN, path length, expiry, revocation, and rotation tests;
-- interoperability fixtures with common TLS stacks.
+- chain, role, SAN, path, expiry, revocation, rotation, and interop tests.
 
 Exit criteria:
 
 - Issuance cannot exceed issuer, role, namespace, or policy constraints.
-- Focused `0.35.0` PKI pentest and crypto review pass.
+- Focused `0.52.0` classical PKI pentest and crypto review pass.
 
-### 0.36.0 - Quantum-Resistant PKI
+### 0.53.0 - Quantum-Resistant PKI
 
-Goal: provide standards-based PQ and hybrid certificate deployment modes.
+Goal: provide standards-based PQ and hybrid certificate modes.
 
 Deliverables:
 
-- RFC 9881 pure ML-DSA issuers, leaves, and CRLs;
-- parallel independent classical and ML-DSA chains requiring both internally;
-- composite draft mode isolated behind an explicit experimental flag.
+- RFC 9881 ML-DSA issuers, leaves, and CRLs;
+- parallel classical/PQ chains requiring both internally;
+- composite draft mode isolated behind an experimental feature.
 
 Verification:
 
-- RFC vectors, dual-chain policy, stripping, rotation, and interop tests;
-- signature fault and key-reuse checks.
+- RFC vectors, stripping, dual-chain, rotation, fault, and interop tests.
 
 Exit criteria:
 
-- Stable modes use final standards and never present draft composite PKI as final.
-- Focused `0.36.0` PQ PKI pentest and crypto review pass.
+- Stable modes use final standards and never present draft PKI as final.
+- Focused `0.53.0` PQ PKI pentest and crypto review pass.
 
-### 0.37.0 - Transit And PKI Completion
+### 0.54.0 - Transit Completion
 
-Goal: complete the planned stable cryptographic service surface.
+Goal: complete the stable Transit surface independently from PKI.
 
 Deliverables:
 
-- Transit sign/verify, import/BYOK policy, export restrictions, and batch APIs;
-- PKI ACME, multiple issuers, tidy, delta/full CRLs, and OCSP operations;
-- migration, backup, performance budgets, and complete operator/API docs.
+- sign/verify, import/BYOK, export restrictions, batch, derivation, and migration;
+- performance budgets, backup/recovery, misuse-resistant API, and full docs.
 
 Verification:
 
-- compatibility suites, migration tests, protocol fuzzing, and load bounds;
-- key-import provenance and forbidden-export tests.
+- compatibility, import provenance, forbidden export, batch, and migration tests.
 
 Exit criteria:
 
-- All stable crypto operations have misuse-resistant APIs and recovery docs.
-- Focused `0.37.0` complete crypto-surface pentest passes.
+- Every Transit operation has explicit key lifecycle and misuse semantics.
+- Focused `0.54.0` Transit-completion pentest passes.
 
-### 0.38.0 - KV v1, SSH, And TOTP Engines
+### 0.55.0 - PKI Completion
 
-Goal: add bounded compatibility and common credential services.
+Goal: complete the stable PKI protocol and issuer surface.
 
 Deliverables:
 
-- explicitly mounted KV v1 with documented lack of history and CAS guarantees;
-- SSH OTP and CA signing with user/host roles;
-- TOTP generation and validation with replay windows and secret isolation.
+- ACME, multiple issuers, tidy, delta/full CRLs, and OCSP operations;
+- migration, backup, recovery, performance bounds, and operator/API docs.
 
 Verification:
 
-- compatibility, replay, role escape, host/user confusion, and clock tests;
-- engine isolation and audit-redaction fixtures.
+- protocol fuzzing, compatibility, migration, load, and recovery tests.
 
 Exit criteria:
 
-- Compatibility engines cannot weaken KV v2, PKI, or identity defaults.
-- Focused `0.38.0` KV v1, SSH, and TOTP pentest passes.
+- PKI protocol behavior is bounded, documented, and independently recoverable.
+- Focused `0.55.0` PKI-completion pentest passes.
 
-## Phase 6: Recovery, Operations, And Clustering
+### 0.56.0 - Hardware And Non-Exportable Providers
 
-### 0.39.0 - Encrypted Backup And Migration
-
-Goal: make backup, restore, and every pre-release format change recoverable.
+Goal: support opaque keys whose provider lifecycle differs from software keys.
 
 Deliverables:
 
-- streaming encrypted snapshot and dual-signed manifest format;
+- PKCS#11/HSM/TPM handles for Transit, PKI, audit, cluster, and seal use;
+- capability discovery, sessions, PIN sources, failover, outage, and provenance;
+- provider-specific rotate, backup, import/export, and deletion semantics.
+
+Verification:
+
+- mock/real device conformance, session exhaustion, failover, PIN, and outage tests.
+
+Exit criteria:
+
+- Software assumptions never cause export or loss of non-exportable keys.
+- Focused `0.56.0` hardware-provider pentest passes.
+
+### 0.57.0 - KV v1 Engine
+
+Goal: add bounded KV v1 compatibility without weakening KV v2.
+
+Deliverables:
+
+- explicit mount type, payload limits, list, delete, and no-history semantics;
+- migration and operator warnings distinguishing absent CAS/history.
+
+Verification:
+
+- compatibility, isolation, size, migration, and accidental-mount tests.
+
+Exit criteria:
+
+- KV v1 limitations cannot silently apply to KV v2 paths.
+- Focused `0.57.0` KV v1 pentest passes.
+
+### 0.58.0 - SSH Secrets Engine
+
+Goal: issue bounded SSH OTP and CA credentials.
+
+Deliverables:
+
+- OTP and CA signing with user/host roles, principals, TTLs, and revocation;
+- key isolation, audit, compatibility, and hard issuance limits.
+
+Verification:
+
+- role escape, host/user confusion, replay, principal, and expiry tests.
+
+Exit criteria:
+
+- SSH credentials cannot exceed role or policy constraints.
+- Focused `0.58.0` SSH-engine pentest passes.
+
+### 0.59.0 - TOTP Secrets Engine
+
+Goal: generate and validate isolated TOTP credentials.
+
+Deliverables:
+
+- key generation/import, validation windows, replay state, rotation, and export policy;
+- secret taxonomy integration and per-key attempt limits.
+
+Verification:
+
+- clock, replay, brute force, seed leakage, import, and rotation tests.
+
+Exit criteria:
+
+- Accepted codes cannot be replayed outside documented policy.
+- Focused `0.59.0` TOTP-engine pentest passes.
+
+## Phase 7: Recovery, Operations, And Clustering
+
+### 0.60.0 - Encrypted Backup And Migration
+
+Goal: make every admitted persisted state recoverable.
+
+Deliverables:
+
+- streaming encrypted snapshots and dual-signed manifests;
 - restore preflight, isolated verification, vault binding, and authorization;
-- resumable migration journal and fixtures from every admitted version.
+- resumable migrations from every prior format and filtered namespace backup.
 
 Verification:
 
-- fresh/wrong vault, interruption, corruption, disk-full, and rollback tests;
-- restore drills from every prior persisted format.
+- wrong vault, interruption, corruption, disk full, rollback, and restore drills.
 
 Exit criteria:
 
 - Restore never mutates live state before complete authenticated verification.
-- Focused `0.39.0` backup, restore, and migration pentest passes.
+- Focused `0.60.0` backup and migration pentest passes.
 
-### 0.40.0 - Rootless Wolfi Operations
+### 0.61.0 - Rootless Wolfi Operations
 
-Goal: operate the standalone binary and hardened Wolfi service safely.
+Goal: operate native and hardened Wolfi deployments safely.
 
 Deliverables:
 
 - non-root image, read-only filesystem, volume ownership, health, and readiness;
-- metrics without sensitive dimensions, operational logs separate from audit;
-- install, upgrade, recovery, systemd-user, and rootless Podman documentation.
+- non-sensitive metrics, separate operational logs, upgrade/recovery, and systemd docs;
+- core-dump, ptrace, secret-file, signal, and shutdown policy.
 
 Verification:
 
-- rootless init/unseal/KV/restart/restore smoke and permission tests;
-- core-dump, ptrace, secret-file, signal, and shutdown tests.
+- rootless init/unseal/KV/restart/restore and permission smokes.
 
 Exit criteria:
 
-- The service survives documented restarts without needing root or hidden state.
-- Focused `0.40.0` container and operations pentest passes.
+- Service operation needs neither root nor hidden developer-local state.
+- Focused `0.61.0` container and operations pentest passes.
 
-### 0.41.0 - Deterministic Raft State Machine
+### 0.62.0 - Deterministic Raft State Machine
 
-Goal: replicate encrypted state through a deterministic consensus boundary.
+Goal: replicate encrypted commands through deterministic consensus.
 
 Deliverables:
 
-- encrypted command model, log/snapshot persistence, and deterministic apply;
-- leader forwarding, consistency tokens, stale-read policy, and backpressure;
-- no barrier key material in ordinary log values.
+- leader-finalized encrypted commands with nonce/ciphertext chosen before replication;
+- deterministic follower apply, log/snapshot persistence, and backpressure;
+- no barrier keys or follower-generated randomness in state-machine apply.
 
 Verification:
 
-- deterministic replay, failover, partition, stale read, and corruption tests;
-- three-node destructive local cluster smoke.
+- deterministic replay, failover, partition, corruption, and three-node tests.
 
 Exit criteria:
 
-- Raft surrounds the state machine and is not treated as a generic storage adapter.
-- Focused `0.41.0` consensus and forwarding pentest passes.
+- Identical committed commands produce identical state on every follower.
+- Focused `0.62.0` Raft state-machine pentest passes.
 
-### 0.42.0 - Raft Membership And Recovery
+### 0.63.0 - Forwarded Identity And Cache Coherence
 
-Goal: make cluster admission and membership changes explicit and recoverable.
+Goal: preserve original client authority across leader forwarding.
 
 Deliverables:
 
-- signed join tokens, learner admission, and joint-consensus promotion/removal;
-- cluster ID, membership epoch, role, address, nonce, and expiry bindings;
-- encrypted snapshots, disaster recovery, and quorum-loss runbooks.
+- authenticated forwarded client, request, policy, namespace, TLS, and audit context;
+- follower anti-forgery credentials and leader reauthorization rules;
+- token revocation, policy change, identity merge, and seal-generation cache invalidation.
 
 Verification:
 
-- rogue join, replay, membership race, quorum loss, snapshot, and recovery tests;
-- model checking for configuration transitions.
+- forged forwarding, stale cache, replay, context swap, and leadership-change tests.
 
 Exit criteria:
 
-- No node gains voting authority outside a committed membership transition.
-- Focused `0.42.0` cluster-membership pentest passes.
+- Followers cannot forge client identity or bypass leader authorization/audit.
+- Focused `0.63.0` forwarding and cache-coherence pentest passes.
 
-### 0.43.0 - Hybrid Cluster Identity
+### 0.64.0 - Raft Membership And Recovery
 
-Goal: protect cluster confidentiality and authentication with independent
-classical and PQ credentials.
+Goal: make admission and membership transitions recoverable.
 
 Deliverables:
 
-- pinned hybrid TLS KEX profile with explicit draft/version migration path;
-- independent classical plus ML-DSA node identity and dual-signed membership;
-- replicated minimum suite and no node-local classical fallback.
+- signed join tokens, learner admission, joint-consensus promote/remove;
+- cluster, node, keys, role, address, nonce, expiry, and membership epoch binding;
+- encrypted snapshots, quorum-loss, and disaster-recovery runbooks.
 
 Verification:
 
-- downgrade, stripping, impersonation, rotation, expiry, and DoS tests;
-- independent cluster identity and transport review.
+- rogue join, replay, race, quorum loss, snapshot, and model tests.
 
 Exit criteria:
 
-- Hybrid key exchange and quantum-resistant authentication are both enforced.
-- Focused `0.43.0` cluster identity pentest and crypto review pass.
+- Voting authority changes only through committed joint consensus.
+- Focused `0.64.0` Raft membership pentest passes.
 
-### 0.44.0 - Threshold Multi-Seal And Auto-Unseal
+### 0.65.0 - Cluster Key Distribution And Seal Coordination
 
-Goal: move secret zero behind provider-neutral threshold protection without
-misrepresenting provider guarantees.
+Goal: distribute and revoke keyring access per admitted node.
 
 Deliverables:
 
-- split seal KEK across independent KMS/HSM/TPM or external providers;
-- challenge responses bound to vault, node, generation, provider, nonce, expiry;
-- hybrid application envelope, downgrade rejection, recovery keys, and seal migration.
+- node-specific hybrid-wrapped key packages and provenance;
+- package invalidation on removal, node seal state, and key-generation fencing;
+- cluster-wide seal/unseal coordination and sealed follower/unsealed leader rules.
 
 Verification:
 
-- provider loss, replay, stale response, downgrade, quorum, and migration tests;
-- per-provider end-to-end quantum-assurance documentation.
+- removed node, stale package, partial unseal, leader change, replay, and race tests.
 
 Exit criteria:
 
-- One provider compromise cannot silently unseal or weaken configured policy.
-- Focused `0.44.0` auto-unseal and secret-zero pentest passes.
+- Removed or sealed nodes cannot retain usable current keyring authority.
+- Focused `0.65.0` cluster key-distribution pentest passes.
 
-### 0.45.0 - Rollback Detection And Checkpoints
+### 0.66.0 - Hybrid Cluster Identity
 
-Goal: detect valid whole-store rollback where deployment topology permits it.
+Goal: protect cluster confidentiality and authentication with classical and PQ identity.
 
 Deliverables:
 
-- hash-chained generations and classical plus ML-DSA signed checkpoints;
-- Raft quorum, TPM/HSM monotonic, and external publication anchor interfaces;
-- explicit standalone impossibility statement and operator alarm/recovery flow.
+- pinned hybrid TLS KEX with explicit draft/version migration;
+- independent classical/PQ node credentials and dual-signed membership;
+- replicated minimum suite and cheap pre-verification DoS controls.
 
 Verification:
 
-- full snapshot rollback, checkpoint deletion, equivocation, and anchor outage tests;
-- offline checkpoint verification tooling.
+- downgrade, stripping, impersonation, rotation, expiry, and load tests.
 
 Exit criteria:
 
-- Each deployment declares and tests its rollback-detection assurance level.
-- Focused `0.45.0` rollback and checkpoint pentest passes.
+- Hybrid confidentiality and quantum-resistant authentication are both enforced.
+- Focused `0.66.0` cluster identity pentest and crypto review pass.
 
-### 0.46.0 - Replication And Multi-Cluster
+### 0.67.0 - Threshold Multi-Seal And Auto-Unseal
 
-Goal: add safe read scaling, disaster recovery, and multi-region foundations.
+Goal: move secret zero behind provider-neutral threshold protection.
 
 Deliverables:
 
-- performance standbys/read replicas with consistency tokens;
-- DR secondary promotion and activation workflow;
-- performance replication and namespace/path filters with conflict policy.
+- KEK shares across independent KMS/HSM/TPM providers;
+- challenge binding to vault, node, generation, provider, nonce, and expiry;
+- hybrid envelope, downgrade rejection, recovery keys, and seal migration.
 
 Verification:
 
-- lag, partition, promotion, replay, stale-read, filter escape, and failback tests;
-- multi-cluster recovery drills.
+- provider loss, replay, stale response, downgrade, quorum, and migration tests.
 
 Exit criteria:
 
-- Replication never silently turns stale or filtered data into authoritative state.
-- Focused `0.46.0` replication and DR pentest passes.
+- One provider compromise cannot silently unseal or weaken policy.
+- Focused `0.67.0` auto-unseal and secret-zero pentest passes.
 
-## Phase 7: Native Dynamic Adapters
+### 0.68.0 - Rollback Detection And Checkpoints
 
-### 0.47.0 - Native Adapter SDK
+Goal: detect valid whole-store rollback where topology permits it.
 
-Goal: standardize dynamic credential lifecycle behind least-privilege adapters.
+Deliverables:
+
+- hash-chained generations and classical/PQ/hash-based signed checkpoints;
+- Raft quorum, hardware monotonic, and external publication anchors;
+- explicit standalone impossibility statement and recovery flow.
+
+Verification:
+
+- snapshot rollback, checkpoint deletion, equivocation, outage, and verifier tests.
+
+Exit criteria:
+
+- Every deployment declares and tests its rollback-detection assurance.
+- Focused `0.68.0` rollback and checkpoint pentest passes.
+
+### 0.69.0 - Replication And Multi-Cluster
+
+Goal: add safe read scaling, DR, and multi-region replication.
+
+Deliverables:
+
+- standbys/read replicas with consistency tokens;
+- DR promotion/activation and performance replication;
+- namespace/path filters with explicit conflict and stale-read policy.
+
+Verification:
+
+- lag, partition, promotion, replay, filter escape, failback, and recovery drills.
+
+Exit criteria:
+
+- Stale or filtered replicas cannot silently become authoritative.
+- Focused `0.69.0` replication and DR pentest passes.
+
+## Phase 8: Native Dynamic Provider Adapters
+
+### 0.70.0 - Native Adapter SDK
+
+Goal: standardize dynamic credential lifecycle behind least privilege.
 
 Deliverables:
 
 - create, renew, revoke, rotate, rollback, and capability contracts;
-- host-owned provider connections and opaque root-credential handles;
-- optional Cargo features, dependency isolation, redaction, and test harness.
+- host-owned egress connections and opaque management credentials;
+- feature isolation, hard operation limits, redaction, and conformance harness.
 
 Verification:
 
-- generic conformance, idempotency, outage, compensation, and leakage tests;
-- compile matrices with every adapter independently enabled and disabled.
+- idempotency, outage, compensation, leakage, and feature-matrix tests.
 
 Exit criteria:
 
-- An adapter cannot obtain master keys, global storage, or arbitrary network access.
-- Focused `0.47.0` adapter-SDK boundary pentest passes.
+- Adapters cannot obtain master keys, global storage, or arbitrary egress.
+- Focused `0.70.0` adapter-SDK pentest passes.
 
-### 0.48.0 - PostgreSQL Dynamic Secrets
+### 0.71.0 - PostgreSQL Dynamic Provider
 
-Goal: deliver the first production native database adapter.
+Goal: manage PostgreSQL credentials, distinct from PostgreSQL storage.
 
 Deliverables:
 
 - dynamic users, static roles, renew, revoke, root rotation, and statements;
-- minimum management privileges and transaction/failure semantics;
-- TLS, connection, username, TTL, and audit documentation.
+- minimum privileges, transactions, limits, TLS, and failure semantics.
 
 Verification:
 
-- rootless PostgreSQL smoke and full adapter conformance suite;
-- partial create/revoke, outage, injection, race, and privilege tests.
+- rootless conformance, injection, partial revoke, race, and outage tests.
 
 Exit criteria:
 
-- PostgreSQL credentials are always revocable or reported as unresolved with evidence.
-- Focused `0.48.0` PostgreSQL adapter pentest passes.
+- Unresolved revocation is reported with durable evidence.
+- Focused `0.71.0` PostgreSQL provider pentest passes.
 
-### 0.49.0 - MySQL, MariaDB, And SurrealDB
+### 0.72.0 - MySQL And MariaDB Dynamic Provider
 
-Goal: expand SQL and multi-model support without pretending semantics are identical.
+Goal: manage MySQL/MariaDB credentials through provider-specific semantics.
 
 Deliverables:
 
-- MySQL/MariaDB dynamic and static roles with root rotation;
-- SurrealDB system-user rotation plus separately scoped record-access/JWT helpers;
-- capability discovery and provider-specific limitation docs.
+- dynamic/static roles, root rotation, statements, grants, and revocation;
+- version capability discovery and least-privilege docs.
 
 Verification:
 
-- rootless service smokes and independent conformance suites;
-- grant, revoke, TTL, injection, outage, and rollback tests per provider.
+- rootless conformance, injection, grant, revoke, race, and outage tests.
 
 Exit criteria:
 
-- Each backend declares its true transaction and revocation guarantees.
-- Focused `0.49.0` database adapter pentest passes.
+- MySQL-family behavior is not inferred from PostgreSQL semantics.
+- Focused `0.72.0` MySQL/MariaDB provider pentest passes.
 
-### 0.50.0 - MongoDB, Redis, Valkey, And RabbitMQ
+### 0.73.0 - SurrealDB Dynamic Provider
 
-Goal: support common document, cache, and messaging credentials.
+Goal: manage SurrealDB credentials separately from authoritative storage.
 
 Deliverables:
 
-- MongoDB users and role grants;
-- Redis/Valkey ACL creation or documented static rotation by server capability;
-- RabbitMQ users, vhosts, tags, permissions, renewal, and revocation.
+- system-user rotation and separately scoped record-access/JWT helpers;
+- capability discovery, limits, revocation, and failure semantics.
 
 Verification:
 
-- rootless provider smokes and independent conformance suites;
-- ACL escape, stale user, partial revoke, outage, and audit tests.
+- rootless conformance, scope, replay, revoke, and outage tests.
 
 Exit criteria:
 
-- Unsupported dynamic behavior is explicit and never emulated insecurely.
-- Focused `0.50.0` service-adapter pentest passes.
+- Record-access helpers cannot inherit system-user authority.
+- Focused `0.73.0` SurrealDB provider pentest passes.
 
-### 0.51.0 - AWS, Azure, And GCP Dynamic Secrets
+### 0.74.0 - MongoDB Dynamic Provider
 
-Goal: manage major-cloud credentials where provider APIs permit safe lifecycle.
+Goal: manage MongoDB users and role grants.
 
 Deliverables:
 
-- scoped credential creation, lease, revoke, rotate, and root recovery workflows;
-- provider-specific identity, API, retry, eventual-consistency, and quota handling;
-- cloud root-credential protection and least-privilege templates.
+- dynamic/static users, roles, TTL, revoke, root rotation, and limits;
+- topology/version capability discovery and least-privilege docs.
 
 Verification:
 
-- emulator/protocol fixtures plus controlled provider tests;
-- partial revoke, retry, confusion, quota, and leaked-response tests.
+- rootless conformance, role escape, stale user, and outage tests.
 
 Exit criteria:
 
-- Provider ambiguity never reports a credential revoked without evidence.
-- Focused `0.51.0` major-cloud adapter pentest passes.
+- MongoDB role scope cannot exceed configured provider policy.
+- Focused `0.74.0` MongoDB provider pentest passes.
 
-### 0.52.0 - European Cloud And Platform Secrets
+### 0.75.0 - Redis And Valkey Dynamic Provider
 
-Goal: add Hetzner, DigitalOcean, Kubernetes, and LDAP credential lifecycle.
+Goal: manage ACL users where server capabilities permit it.
 
 Deliverables:
 
-- Hetzner and DigitalOcean project/token operations supported by their APIs;
-- Kubernetes service-account/token secrets engine distinct from Kubernetes auth;
-- LDAP credential management distinct from LDAP authentication.
+- ACL create/rotate/revoke or explicit static-only fallback by version;
+- command/key/channel scope, limits, and capability discovery.
 
 Verification:
 
-- provider protocol fixtures, rootless platform smokes, and conformance tests;
-- scope, revocation, token leakage, outage, and eventual-consistency tests.
+- rootless conformance, ACL escape, stale user, downgrade, and outage tests.
 
 Exit criteria:
 
-- Every provider documents exactly which lifecycle guarantees its API supports.
-- Focused `0.52.0` cloud/platform adapter pentest passes.
+- Unsupported dynamic behavior is explicit and never insecurely emulated.
+- Focused `0.75.0` Redis/Valkey provider pentest passes.
 
-### 0.53.0 - Adapter Certification
+### 0.76.0 - RabbitMQ Dynamic Provider
+
+Goal: manage RabbitMQ users, vhosts, tags, and permissions.
+
+Deliverables:
+
+- create, renew, revoke, rotate, permission, vhost, and limit behavior;
+- management API egress, least privilege, and audit redaction.
+
+Verification:
+
+- rootless conformance, vhost escape, stale user, and outage tests.
+
+Exit criteria:
+
+- RabbitMQ credentials cannot exceed role-scoped vhost permissions.
+- Focused `0.76.0` RabbitMQ provider pentest passes.
+
+### 0.77.0 - AWS Dynamic Provider
+
+Goal: manage scoped AWS credentials where APIs permit safe lifecycle.
+
+Deliverables:
+
+- credential create/lease/revoke/rotate, eventual consistency, and quotas;
+- root credential protection and least-privilege templates.
+
+Verification:
+
+- emulator/provider protocol, partial revoke, retry, scope, and leakage tests.
+
+Exit criteria:
+
+- AWS ambiguity never reports revocation without evidence.
+- Focused `0.77.0` AWS provider pentest passes.
+
+### 0.78.0 - Azure Dynamic Provider
+
+Goal: manage scoped Azure credentials through explicit tenant policy.
+
+Deliverables:
+
+- credential lifecycle, tenant/subscription binding, retries, and quotas;
+- root credential protection and least-privilege templates.
+
+Verification:
+
+- protocol, partial revoke, tenant confusion, retry, and leakage tests.
+
+Exit criteria:
+
+- Azure authority remains bound to configured tenant and subscription.
+- Focused `0.78.0` Azure provider pentest passes.
+
+### 0.79.0 - GCP Dynamic Provider
+
+Goal: manage scoped GCP credentials through explicit project policy.
+
+Deliverables:
+
+- credential lifecycle, project/account binding, retries, and quotas;
+- root credential protection and least-privilege templates.
+
+Verification:
+
+- protocol, partial revoke, project confusion, retry, and leakage tests.
+
+Exit criteria:
+
+- GCP authority remains bound to configured project and account.
+- Focused `0.79.0` GCP provider pentest passes.
+
+### 0.80.0 - Hetzner Dynamic Provider
+
+Goal: manage Hetzner credentials where provider APIs permit lifecycle control.
+
+Deliverables:
+
+- project/token create, scope, rotate, revoke, limitations, and quotas;
+- egress, root credential protection, and least-privilege docs.
+
+Verification:
+
+- protocol, scope, partial revoke, retry, and leakage tests.
+
+Exit criteria:
+
+- Unsupported Hetzner lifecycle operations are explicit.
+- Focused `0.80.0` Hetzner provider pentest passes.
+
+### 0.81.0 - DigitalOcean Dynamic Provider
+
+Goal: manage DigitalOcean credentials where provider APIs permit lifecycle control.
+
+Deliverables:
+
+- project/token create, scope, rotate, revoke, limitations, and quotas;
+- egress, root credential protection, and least-privilege docs.
+
+Verification:
+
+- protocol, scope, partial revoke, retry, and leakage tests.
+
+Exit criteria:
+
+- Unsupported DigitalOcean lifecycle operations are explicit.
+- Focused `0.81.0` DigitalOcean provider pentest passes.
+
+### 0.82.0 - Kubernetes Secrets Provider
+
+Goal: manage Kubernetes service-account/token secrets separately from auth.
+
+Deliverables:
+
+- namespace/service-account scope, token modes, lease, revoke, and quotas;
+- cluster destination binding and least-privilege RBAC templates.
+
+Verification:
+
+- rootless cluster, namespace escape, stale token, revoke, and outage tests.
+
+Exit criteria:
+
+- Kubernetes secret issuance cannot inherit authentication reviewer authority.
+- Focused `0.82.0` Kubernetes secrets-provider pentest passes.
+
+### 0.83.0 - LDAP Secrets Provider
+
+Goal: manage LDAP credentials separately from LDAP authentication.
+
+Deliverables:
+
+- static password rotation, supported dynamic entries, revoke, and limits;
+- directory scope, TLS, least-privilege, and failure semantics.
+
+Verification:
+
+- rootless fixture, DN/filter injection, partial rotation, and outage tests.
+
+Exit criteria:
+
+- LDAP management authority cannot be used as login authority.
+- Focused `0.83.0` LDAP secrets-provider pentest passes.
+
+### 0.84.0 - Adapter Certification
 
 Goal: make adapter safety evidence machine-readable and non-self-asserted.
 
 Deliverables:
 
-- certification runner for create, renew, revoke, rotate, rollback, outage,
-  idempotency, privileges, and audit redaction;
-- signed capability metadata and independent result provenance;
-- promotion policy for native and future Wasm adapters.
+- signed create/renew/revoke/rotate/rollback/outage/idempotency/redaction results;
+- capability metadata, provenance, promotion, expiry, and revocation policy.
 
 Verification:
 
-- certification bypass, feature-flag, manifest-forgery, and stale-result tests;
-- complete conformance matrix for all shipped adapters.
+- bypass, feature flag, forged manifest, stale result, and full matrix tests.
 
 Exit criteria:
 
-- No adapter is labeled stable without reproducible conformance evidence.
-- Focused `0.53.0` adapter certification pentest passes.
+- No adapter is stable without reproducible conformance evidence.
+- Focused `0.84.0` adapter-certification pentest passes.
 
-## Phase 8: Process-Isolated Extensions
+## Phase 9: Process-Isolated Extensions
 
-### 0.54.0 - Component ABI And Signed Manifests
+### 0.85.0 - Component ABI And Signed Manifests
 
-Goal: define a narrow versioned extension contract before executing third-party code.
+Goal: define a narrow extension contract before third-party execution.
 
 Deliverables:
 
-- WIT/component ABI for auth, secrets, database, cloud, and notifications;
-- dual classical/PQ signed manifests, hashes, SBOM, capabilities, and ABI ranges;
-- publisher trust, transparency, revocation, and provenance model.
+- WIT/component ABI for auth, secrets, provider, cloud, and notification roles;
+- dual classical/PQ manifests, hashes, SBOM, capabilities, and ABI ranges;
+- publisher trust, transparency, revocation, and provenance.
 
 Verification:
 
-- canonical ABI fixtures, manifest fuzzing, signature stripping, and revocation tests;
-- incompatible ABI and unknown capability rejection.
+- ABI fixtures, manifest fuzzing, stripping, revocation, and compatibility tests.
 
 Exit criteria:
 
-- Signed provenance is verified but never represented as proof of safety.
-- Focused `0.54.0` plugin supply-chain pentest passes.
+- Provenance is verified but never represented as proof of safety.
+- Focused `0.85.0` plugin supply-chain pentest passes.
 
-### 0.55.0 - Restricted Plugin Worker
+### 0.86.0 - Restricted Worker And Authenticated IPC
 
-Goal: execute Wasmtime outside the vault process and key address space.
+Goal: execute Wasmtime outside vault memory through bounded authenticated IPC.
 
 Deliverables:
 
-- separate unprivileged worker with no WASI, inherited environment, filesystem,
-  stdio, clock, randomness, or sockets by default;
-- Linux namespaces, no-new-privileges, seccomp/Landlock, cgroups, and reduced-
-  assurance profiles for other platforms;
-- fuel, epoch, stack, memory, table, instance, output, call, and deadline limits.
+- separate unprivileged worker with no WASI or inherited ambient resources;
+- authenticated length-delimited IPC, protocol version, worker identity, nonce,
+  replay/stale rejection, in-flight limits, backpressure, cancellation, and cleanup;
+- sandbox, cgroup, fuel, epoch, stack, memory, table, output, and deadline limits;
+- compiled-module cache integrity and exact Wasmtime version.
 
 Verification:
 
-- escape regressions, resource exhaustion, worker crash, restart, and IPC fuzzing;
-- exact Wasmtime-version and precompiled-artifact compatibility tests.
+- escape, IPC fuzz, replay, resource exhaustion, crash, orphan, and cache tests.
 
 Exit criteria:
 
-- Worker compromise does not share master-process memory or ambient authority.
-- Focused `0.55.0` independent sandbox and worker-OS pentest passes.
+- Worker compromise shares neither master memory nor ambient authority.
+- Focused `0.86.0` independent worker/IPC sandbox pentest passes.
 
-### 0.56.0 - Capability Handles And Network Broker
+### 0.87.0 - Plugin Capability And Network Broker
 
-Goal: expose only invocation-scoped high-level host operations to plugins.
+Goal: expose invocation-scoped high-level operations only.
 
 Deliverables:
 
-- opaque handles bound to plugin, mount, namespace, operation, epoch, and budget;
-- host-owned provider connections and per-mount barrier storage views;
-- SSRF-safe network broker validating DNS, resolved IPs, TLS, method, size, and deadlines.
+- handles bound to plugin, mount, namespace, operation, epoch, target, and budget;
+- per-mount storage, structured audit, and SSRF-safe provider connection calls;
+- no raw management credentials, arbitrary sockets, or general crypto capability.
 
 Verification:
 
-- confused deputy, reentrancy, stale handle, cross-mount, DNS rebinding, metadata,
-  loopback, link-local, Unix-socket, and response-size tests.
+- confused deputy, reentrancy, stale handle, cross-mount, and SSRF tests.
 
 Exit criteria:
 
-- Plugins receive no raw root credentials, arbitrary sockets, or general crypto access.
-- Focused `0.56.0` host-capability and SSRF pentest passes.
+- Plugins cannot exceed invocation-scoped host capabilities.
+- Focused `0.87.0` plugin-capability pentest passes.
 
-### 0.57.0 - Plugin Lifecycle And Certification
+### 0.88.0 - Controlled Plugin Host Services
 
-Goal: make extension installation, operation, upgrade, rollback, and revocation safe.
+Goal: provide legitimate time and randomness without ambient access.
 
 Deliverables:
 
-- pin, install, enable, disable, upgrade, rollback, quarantine, and revoke workflows;
-- structured audit-only host interface and secret-copy limitation docs;
-- adapter conformance certification and compromised-publisher response.
+- bounded monotonic/wall-time and CSPRNG host calls through shared services;
+- capability, rate, size, audit, cancellation, and deterministic test rules;
+- explicit treatment of plugin plaintext copies and outputs.
 
 Verification:
 
-- rollback, downgrade, revoked signer, stale instance, cross-tenant, and recovery tests;
-- third-party fixture plugins through the full lifecycle.
+- clock manipulation, randomness abuse, budget, replay, and secret-copy tests.
+
+Exit criteria:
+
+- Plugins cannot emulate or obtain uncontrolled clock, entropy, or secret sources.
+- Focused `0.88.0` plugin-host-service pentest passes.
+
+### 0.89.0 - Plugin Lifecycle And Certification
+
+Goal: make install, operation, upgrade, rollback, and revocation safe.
+
+Deliverables:
+
+- pin, install, enable, disable, upgrade, rollback, quarantine, and revoke;
+- conformance certification and compromised-publisher response;
+- complete operator, recovery, provenance, and limitations docs.
+
+Verification:
+
+- downgrade, revoked signer, stale instance, cross-tenant, and recovery tests.
 
 Exit criteria:
 
 - Stable extension status requires sandbox, supply-chain, and conformance evidence.
-- Focused `0.57.0` full extension-platform pentest passes.
+- Focused `0.89.0` extension-lifecycle pentest passes.
 
-## Phase 9: Operator Intelligence And Governance
+## Phase 10: Operator Intelligence And Governance
 
-### 0.58.0 - Secret Inventory
+### 0.90.0 - Secret Inventory
 
-Goal: expose actionable metadata without creating a secret-existence oracle.
+Goal: expose actionable metadata without a secret-existence oracle.
 
 Deliverables:
 
-- owner, engine, type, static/dynamic, access, expiry, rotation, and dependencies;
-- namespace-aware inventory API with pagination and immutable snapshots;
+- owner, engine, type, access, expiry, rotation, and dependency metadata;
+- namespace-aware bounded paginated immutable inventory snapshots;
 - explicit unknown, unavailable, unsupported, and redacted states.
 
 Verification:
 
-- consistency across KV, leases, auth, adapters, and audit;
-- enumeration, inference, stale index, authorization, and pagination tests.
+- consistency, enumeration, inference, stale index, auth, and pagination tests.
 
 Exit criteria:
 
 - Inventory reveals no path or relationship beyond caller capability.
-- Focused `0.58.0` inventory leakage pentest passes.
+- Focused `0.90.0` inventory-leakage pentest passes.
 
-### 0.59.0 - Policy Simulator, Dry Run, And Developer Mode
+### 0.91.0 - Policy Simulator
 
-Goal: explain and preview operations without granting mutation capability.
+Goal: explain revision-pinned policy without mutating state.
 
 Deliverables:
 
-- revision-pinned policy explanation with distinct `policy:explain` capability;
-- read-only blast-radius engine for policy, mount, namespace, delete, revoke, and rotate;
-- safe local developer profile with reset, samples, test PKI, and production guardrails.
+- distinct `policy:explain` capability and complete hypothetical request;
+- allowed, denied, approval-required, indeterminate, and redacted explanations;
+- read-only capability object, rate limits, and existence suppression.
 
 Verification:
 
-- simulator oracle, policy race, mutation-host-call, blast-radius, and guardrail tests;
-- deterministic golden explanations and developer workflow smoke.
+- oracle, policy race, mutation-host-call, redaction, and golden tests.
 
 Exit criteria:
 
-- Simulation and dry run cannot mutate state or disclose secret existence.
-- Focused `0.59.0` simulator and developer-mode pentest passes.
+- Simulation cannot mutate state or disclose unauthorized existence.
+- Focused `0.91.0` policy-simulator pentest passes.
 
-### 0.60.0 - Leak Intake And Private Correlation
+### 0.92.0 - Dangerous-Change Dry Run
+
+Goal: preview blast radius through non-mutating capabilities.
+
+Deliverables:
+
+- policy, mount, namespace, delete, revoke, root rotation, and adapter previews;
+- revision-bound result, pagination, limits, and no mutation host calls.
+
+Verification:
+
+- hidden mutation, stale revision, race, scope, and blast-radius tests.
+
+Exit criteria:
+
+- Dry run produces no durable or upstream side effect.
+- Focused `0.92.0` dry-run safety pentest passes.
+
+### 0.93.0 - Local Developer Profile
+
+Goal: make local use easy without disguising non-production guarantees.
+
+Deliverables:
+
+- reset, samples, test PKI, local storage, and obvious production guardrails;
+- no network exposure by default and deterministic disposable workflows.
+
+Verification:
+
+- reset, sample, accidental production, listener, and persistence tests.
+
+Exit criteria:
+
+- Developer mode cannot be silently promoted to production configuration.
+- Focused `0.93.0` developer-profile pentest passes.
+
+### 0.94.0 - Leak Intake And Private Correlation
 
 Goal: turn scanner findings into safe managed-secret response inputs.
 
 Deliverables:
 
-- authenticated finding schema with source, detector, confidence, and evidence hash;
-- redacted storage that never persists raw leaked values;
-- privacy-preserving correlation to secrets, leases, SecretIDs, tokens, and keys.
+- authenticated finding schema and evidence hash;
+- no raw leaked-value persistence;
+- privacy-preserving bounded correlation to secrets, leases, IDs, tokens, and keys.
 
 Verification:
 
-- raw-secret rejection, false positive, collision, inference, replay, and race tests;
-- scanner/CI integration fixtures.
+- raw-secret rejection, false positive, collision, inference, replay, and race tests.
 
 Exit criteria:
 
-- Correlation cannot become an oracle or a repository for leaked plaintext.
-- Focused `0.60.0` leak-evidence and correlation pentest passes.
+- Correlation is neither an oracle nor leaked-plaintext repository.
+- Focused `0.94.0` leak-correlation pentest passes.
 
-### 0.61.0 - Rotation Readiness And Lifecycle Webhooks
+### 0.95.0 - Rotation Readiness
 
-Goal: make leak and lifecycle findings actionable and auditable.
+Goal: report and execute verifiable rotation readiness.
 
 Deliverables:
 
-- readiness states for automatic, manual, blocked, unsupported, ownerless, and
-  non-revocable secrets;
-- lease/revoke/rotate workflows with approvals where required;
-- signed, replay-safe created/read/rotated/expiring/revoked/leak/denied webhooks.
+- automatic, manual, blocked, unsupported, ownerless, and non-revocable states;
+- adapter/engine rotation plans, verification evidence, approvals, and limits.
 
 Verification:
 
-- scoring matrix, rotation race, retry, idempotency, signing, and delivery tests;
-- no raw secret appears in payloads or logs.
+- scoring matrix, race, partial rotation, false success, and rollback tests.
 
 Exit criteria:
 
-- Automation never claims successful rotation without verification evidence.
-- Focused `0.61.0` rotation and webhook pentest passes.
+- Automation never claims rotation without verification evidence.
+- Focused `0.95.0` rotation-readiness pentest passes.
 
-### 0.62.0 - Human Approval Controls
+### 0.96.0 - Signed Lifecycle Webhooks
+
+Goal: export replay-safe lifecycle events through native egress.
+
+Deliverables:
+
+- created/read/rotated/expiring/revoked/leak/denied event schemas;
+- signing, nonce, sequence, retry, idempotency, destination, and delivery limits.
+
+Verification:
+
+- replay, SSRF, signature, retry, reorder, leakage, and outage tests.
+
+Exit criteria:
+
+- Webhooks contain no raw secrets and cannot target unauthorized destinations.
+- Focused `0.96.0` lifecycle-webhook pentest passes.
+
+### 0.97.0 - Human Approval Controls
 
 Goal: require policy-selected quorum approval for sensitive operations.
 
 Deliverables:
 
-- pending request, approve, deny, cancel, expiry, and quorum evaluator;
-- security/DBA, multi-maintainer, namespace-admin, and custom role rules;
-- integration for unwrap, root access, rekey, mount/namespace delete, and rotation.
+- pending, approve, deny, cancel, expiry, quorum, role, and hard pending limits;
+- immutable operation/context binding and integration for sensitive workflows.
 
 Verification:
 
-- replay, quorum mismatch, role change, timeout, cancellation, and audit-failure tests;
-- immutable operation/context binding.
+- replay, mismatch, role change, timeout, cancellation, and audit-failure tests.
 
 Exit criteria:
 
-- Approval for one operation cannot authorize another or survive expiry.
-- Focused `0.62.0` approval-bypass pentest passes.
+- Approval cannot authorize another operation or survive expiry.
+- Focused `0.97.0` approval-bypass pentest passes.
 
-### 0.63.0 - Break-Glass Recovery
+### 0.98.0 - Break-Glass And Emergency Journal
 
-Goal: provide time-limited emergency authority with forensic accountability.
+Goal: issue emergency authority only after independent durable evidence.
 
 Deliverables:
 
-- quorum, reason, bounded scope, expiry, forced marking, and privilege rollback;
-- emergency token isolation, revocation, post-incident summary, and evidence bundle;
-- recovery path for audit-degraded and partial-outage scenarios.
+- preallocated emergency journal/reserve with separate key and storage path;
+- quorum, reason, scope, expiry, forced marking, rollback, and incident summary;
+- break-glass remains blocked if both mandatory and emergency journals fail.
 
 Verification:
 
-- replay, scope escape, clock, privilege retention, audit loss, and rollback tests;
-- destructive incident drills.
+- disk full, reserve exhaustion, replay, scope escape, privilege retention, and drills.
 
 Exit criteria:
 
-- Emergency authority expires and leaves independently verifiable evidence.
-- Focused `0.63.0` break-glass abuse pentest passes.
+- No best-effort audit path can issue break-glass authority.
+- Focused `0.98.0` break-glass and emergency-journal pentest passes.
 
-### 0.64.0 - Tamper-Evident Evidence Bundles
+### 0.99.0 - Tamper-Evident Evidence Bundles
 
 Goal: make security events independently verifiable after incidents.
 
 Deliverables:
 
-- append-only audit hash chain and classical plus ML-DSA checkpoints;
-- redacted bundles for incidents, approvals, break-glass, leaks, rotations, and policy;
-- offline verifier, external publication, archival, and lifecycle replay APIs.
+- append-only audit chain and classical/PQ/hash-based checkpoints;
+- redacted incident, approval, break-glass, leak, rotation, and policy bundles;
+- offline verifier, publication, archival, and replay APIs.
 
 Verification:
 
-- deletion, reorder, mutation, truncation, key compromise, rollback, and import tests;
-- deterministic offline verification fixtures.
+- delete, reorder, mutate, truncate, key compromise, rollback, and import tests.
 
 Exit criteria:
 
-- Evidence tampering or incomplete history is detected and reported explicitly.
-- Focused `0.64.0` evidence-integrity pentest passes.
+- Evidence tampering or incomplete history is reported explicitly.
+- Focused `0.99.0` evidence-integrity pentest passes.
 
-## Phase 10: Broad Parity And Integrations
+## Phase 11: Specialized Services And Integrations
 
-### 0.65.0 - Transform, KMIP, And Key Management
+### 0.100.0 - Transform Engine
 
-Goal: add specialized key and data-protection services behind isolated listeners.
+Goal: add format-preserving transform, masking, and tokenization independently.
 
 Deliverables:
 
-- format-preserving transform, masking, and tokenization after crypto review;
-- KMIP listener, managed objects, scopes, roles, and certificate identity;
-- KMS/TDE key-management adapters with explicit provider guarantees.
+- reviewed algorithms, tweak/domain policy, masking, tokenization, rotation, and limits;
+- isolated keys, misuse-resistant API, migration, and operator docs.
 
 Verification:
 
-- format-domain, collision, misuse, protocol fuzz, role, and key-lifecycle tests;
-- independent transform and KMIP security review.
+- domain, collision, leakage, misuse, migration, and crypto-review vectors.
 
 Exit criteria:
 
-- Specialized protocols cannot bypass normal identity, policy, audit, or key isolation.
-- Focused `0.65.0` Transform/KMIP/key-management pentest passes.
+- Transform cannot weaken Transit or expose reversible mappings without policy.
+- Focused `0.100.0` Transform pentest and crypto review pass.
 
-### 0.66.0 - Advanced Policy And Operator APIs
+### 0.101.0 - KMIP Service
 
-Goal: complete governance and day-two system controls.
+Goal: expose a separately authenticated bounded KMIP listener.
 
 Deliverables:
 
-- deterministic CEL-style policy extension and group-policy propagation;
-- rate and lease-count quotas, locked-user, audit elision, monitor, and log tuning APIs;
-- disabled-by-default protected profiling and raw-storage access remains absent.
+- managed objects, operations, scopes, roles, TLS identity, limits, and lifecycle;
+- isolated listener, parser, audit, policy, recovery, and interoperability docs.
 
 Verification:
 
-- policy determinism, quota race, elision leakage, unlock, and profiling auth tests;
-- system API compatibility fixtures.
+- protocol fuzzing, role escape, object confusion, TLS, and interop tests.
 
 Exit criteria:
 
-- Operational controls cannot weaken mandatory audit or expose raw storage.
-- Focused `0.66.0` advanced-policy and operator-API pentest passes.
+- KMIP cannot bypass normal identity, policy, audit, or key isolation.
+- Focused `0.101.0` KMIP listener pentest passes.
 
-### 0.67.0 - Clients, Agent, Proxy, And Auto-Auth
+### 0.102.0 - KMS And TDE Key Management
 
-Goal: let applications consume the stable API without embedding ambient authority.
+Goal: manage provider keys for KMS/TDE use without conflating providers.
+
+Deliverables:
+
+- provider-specific create, rotate, disable, delete, import/export, and provenance;
+- opaque handles, egress, quotas, recovery, and limitation docs.
+
+Verification:
+
+- partial operation, outage, provenance, scope, retry, and deletion tests.
+
+Exit criteria:
+
+- Provider ambiguity never reports key destruction or rotation without evidence.
+- Focused `0.102.0` KMS/TDE pentest passes.
+
+### 0.103.0 - Advanced Policy Language
+
+Goal: add deterministic CEL-style governance without ambient inputs.
+
+Deliverables:
+
+- typed expressions, bounded evaluation, group propagation, obligations, and versions;
+- deterministic inputs, migration, diagnostics, and compatibility policy.
+
+Verification:
+
+- determinism, budget, ambiguity, bypass, migration, and policy fuzz tests.
+
+Exit criteria:
+
+- Advanced rules cannot override explicit denies or root restrictions.
+- Focused `0.103.0` advanced-policy pentest passes.
+
+### 0.104.0 - Configurable Resource Quotas
+
+Goal: make inherited hard limits safely operator-configurable.
+
+Deliverables:
+
+- token, lease, KV, identity, group, policy, mount, namespace, wrapping, approval,
+  adapter, plugin, and request quota APIs;
+- defaults, reservation, hierarchy, race, accounting, and recovery semantics.
+
+Verification:
+
+- exhaustion, race, hierarchy, restart, rollback, and bypass tests.
+
+Exit criteria:
+
+- Configuration can tighten limits and cannot silently disable safety ceilings.
+- Focused `0.104.0` quota-enforcement pentest passes.
+
+### 0.105.0 - Audit And Runtime Operator APIs
+
+Goal: add bounded audit elision, monitoring, and runtime log control.
+
+Deliverables:
+
+- audit elision with counts, monitor stream, log-level tuning, and safe diagnostics;
+- authorization, rate, size, lifetime, redaction, and restore-to-default behavior.
+
+Verification:
+
+- leakage, bypass, stream DoS, log injection, and runtime-race tests.
+
+Exit criteria:
+
+- Runtime observability cannot weaken mandatory audit or expose secrets.
+- Focused `0.105.0` operator-observability pentest passes.
+
+### 0.106.0 - Locked-User And Profiling APIs
+
+Goal: expose lockout repair and protected diagnostics independently.
+
+Deliverables:
+
+- list/unlock state with authorization and evidence;
+- disabled-by-default profiling with explicit build/runtime gates and hard limits.
+
+Verification:
+
+- unlock escalation, enumeration, profiling leakage, DoS, and disabled-state tests.
+
+Exit criteria:
+
+- Production profiling remains absent unless explicitly compiled and enabled.
+- Focused `0.106.0` lockout/profiling pentest passes.
+
+### 0.107.0 - API Client Libraries
+
+Goal: provide typed clients without embedding ambient authority.
 
 Deliverables:
 
 - Rust client and generated clients from the OpenAPI contract;
-- separate agent/proxy for auto-auth, caching, renewal, and templates;
-- bounded local IPC, sink permissions, token handoff, and shutdown behavior.
+- idempotency, retries, TLS/hybrid policy, pagination, redaction, and cancellation.
 
 Verification:
 
-- client compatibility, cache isolation, template injection, IPC, and token theft tests;
-- Linux, macOS, Windows, and BSD smoke where supported.
+- compatibility, retry, secret logging, pagination, and cross-platform tests.
 
 Exit criteria:
 
-- Client helpers cannot become an unaudited alternate control plane.
-- Focused `0.67.0` client and agent/proxy pentest passes.
+- Clients preserve server security semantics and never log credentials.
+- Focused `0.107.0` client-library pentest passes.
 
-### 0.68.0 - Platform Reconciliation And Secret Sync
+### 0.108.0 - Agent, Proxy, And Auto-Auth
 
-Goal: integrate Lykilheim with deployment tooling without normalizing secret sprawl.
+Goal: provide a separate least-authority client helper process.
 
 Deliverables:
 
-- Kubernetes operator, CSI/injector, and scoped synchronization workflows;
-- Terraform provider or explicitly tested compatibility layer;
-- destination allowlists, drift detection, GitOps config reconciliation, and no
-  secret payloads in declarative source by default.
+- auto-auth, cache, renewal, templates, bounded local IPC, sinks, and shutdown;
+- token handoff, process identity, file permissions, and platform profiles.
 
 Verification:
 
-- namespace escape, stale sync, drift race, destination auth, and rollback tests;
-- rootless local platform integration smoke.
+- cache isolation, template injection, IPC, token theft, race, and platform tests.
 
 Exit criteria:
 
-- Sync destinations and reconcilers receive only explicitly authorized secrets.
-- Focused `0.68.0` platform-integration and secret-sync pentest passes.
+- Agent/proxy cannot become an unaudited alternate control plane.
+- Focused `0.108.0` agent/proxy pentest passes.
 
-### 0.69.0 - Experimental Security Integrations
+### 0.109.0 - Kubernetes Operator And Injection
 
-Goal: isolate promising TEE, ZKP, and eBPF work without weakening stable behavior.
+Goal: integrate Kubernetes operator, CSI, and injection workflows.
 
 Deliverables:
 
-- attestation-bound key release experiments with explicit trust roots;
-- zero-knowledge authentication predicates with bounded proof verification;
-- eBPF audit export with durable journal remaining the security gate.
+- namespace-scoped reconciliation, CSI/injector delivery, renewal, and cleanup;
+- RBAC templates, destination policy, quotas, and failure behavior.
 
 Verification:
 
-- compile/runtime feature isolation and fallback-rejection tests;
-- attestation replay, proof DoS, verifier soundness, and audit-loss tests.
+- namespace escape, stale mount, pod identity, token, and cleanup tests.
 
 Exit criteria:
 
-- Experimental features are disabled by default and cannot alter stable guarantees.
-- Focused `0.69.0` experimental-feature pentest passes before any preview label.
+- Kubernetes integration cannot cross namespace or service-account scope.
+- Focused `0.109.0` Kubernetes integration pentest passes.
 
-## Phase 11: Stable Qualification
+### 0.110.0 - Secret Synchronization
 
-### 0.70.0 - Portability And Reproducible Artifacts
-
-Goal: qualify native binaries and Wolfi artifacts across supported environments.
+Goal: sync explicitly authorized secrets with drift detection.
 
 Deliverables:
 
-- Linux x86_64/aarch64, macOS x86_64/aarch64, Windows x86_64/aarch64 where
-  supported, and practical BSD build/test evidence;
-- hardened Linux-only Wolfi image, signed SBOM, provenance, and checksums;
-- deterministic release scripts and platform assurance/limitation matrix.
+- destination allowlists, versions, drift, ownership, retry, revoke, and audit;
+- no broad export, bounded fanout, and source/destination conflict policy.
 
 Verification:
 
-- clean-VM build and smoke on each target;
-- reproducibility comparison, artifact signing, install, upgrade, and rollback tests.
+- destination escape, stale sync, drift race, partial write, and revoke tests.
 
 Exit criteria:
 
-- Artifacts are traceable to the exact source and require no developer-local state.
-- Focused `0.70.0` supply-chain and cross-platform pentest passes.
+- Sync exports only specifically authorized secret versions and destinations.
+- Focused `0.110.0` secret-sync pentest passes.
 
-### 0.71.0 - API And Feature-Parity Closeout
+### 0.111.0 - Terraform Integration
 
-Goal: close every planned Vault/OpenBao inventory item before compatibility freeze.
+Goal: provide Terraform workflows without placing secrets in state by default.
 
 Deliverables:
 
-- complete system backend subset, OpenAPI endpoint, path help, and version history;
-- every parity item marked implemented, experimental, or deliberately different;
-- complete user, operator, API, config, migration, recovery, and limitations docs.
+- custom provider or tested compatibility layer with sensitive-state policy;
+- idempotency, drift, import, delete, retry, and documentation.
 
 Verification:
 
-- endpoint inventory and compatibility fixtures against documented behavior;
-- documentation link, example, stale-version, and unsupported-behavior audits.
+- state leakage, plan output, drift, retry, import, and destroy tests.
 
 Exit criteria:
 
-- No feature is silently missing, implied compatible, or undocumented.
-- Focused `0.71.0` API inventory and parity pentest passes.
+- Terraform state and plans do not contain secret payloads by default.
+- Focused `0.111.0` Terraform integration pentest passes.
 
-### 0.72.0 - Composed Security Campaign
+### 0.112.0 - GitOps Configuration Reconciliation
 
-Goal: test interactions across all admitted trust boundaries at production scale.
+Goal: reconcile non-secret configuration without storing payloads in source.
 
 Deliverables:
 
-- continuous parser/format fuzzing, Miri, Loom, property, and model campaigns;
-- destructive storage, audit, seal, token, lease, adapter, plugin, and Raft testing;
-- resource, latency, memory, recovery, and denial-of-service budgets.
+- signed declarative mounts, policies, auth config, revisions, and dry-run;
+- no secret payload schema, conflict, rollback, approval, and audit behavior.
 
 Verification:
 
-- long-running fuzz corpus and model-check reports;
-- full multi-node, multi-namespace, adapter, plugin, backup, and recovery scenario.
+- secret rejection, signature, stale revision, conflict, and rollback tests.
 
 Exit criteria:
 
-- No security-critical boundary first receives fuzzing or failure injection here;
-  this campaign proves their composition.
-- Focused `0.72.0` full-system pentest passes for the exact release commit.
+- GitOps cannot smuggle secret payloads or bypass approval/policy.
+- Focused `0.112.0` GitOps reconciliation pentest passes.
 
-### 0.73.0 - Stable Release Candidate Freeze
+## Phase 12: Isolated Experimental Security
 
-Goal: freeze features and compatibility with no new production behavior.
+### 0.113.0 - TEE Attestation Preview
+
+Goal: experiment with attestation-bound release behind isolated features.
 
 Deliverables:
 
-- final API, storage, audit, plugin ABI, crypto-suite, and migration contracts;
-- all accepted residual risks, deprecations, experimental features, and platform
-  limitations documented;
-- complete release candidate runbooks, evidence, SBOM, provenance, and artifacts.
+- explicit trust roots, evidence freshness, workload identity, key release, and limits;
+- provider-specific residual risks and no stable fallback changes.
 
 Verification:
 
-- clean-checkout release gates and migration from every pre-release format;
-- full portability, Wolfi, API, recovery, replication, and reproducibility matrix.
+- replay, stale evidence, root replacement, downgrade, and outage tests.
+
+Exit criteria:
+
+- TEE preview is disabled by default and cannot weaken stable key release.
+- Focused `0.113.0` TEE-preview pentest passes.
+
+### 0.114.0 - Zero-Knowledge Policy Preview
+
+Goal: admit bounded proofs only for reviewed hidden policy predicates.
+
+Deliverables:
+
+- proof-system version, setup/trust model, transcript, context, and verification limits;
+- isolated policy capability and explicit unsupported predicates.
+
+Verification:
+
+- independent vectors, malformed proof, replay, context, soundness, and DoS tests.
+
+Exit criteria:
+
+- ZKP preview cannot grant authority outside its exact admitted predicate.
+- Focused `0.114.0` ZKP-preview pentest passes.
+
+### 0.115.0 - eBPF Audit Export Preview
+
+Goal: export observability without making eBPF the security gate.
+
+Deliverables:
+
+- bounded event schema, loader privileges, kernel compatibility, loss counters, and limits;
+- durable journal remains authoritative and export failure is explicit.
+
+Verification:
+
+- event loss, verifier/load failure, privilege, kernel mismatch, and DoS tests.
+
+Exit criteria:
+
+- eBPF loss or disablement cannot bypass mandatory durable audit.
+- Focused `0.115.0` eBPF-export pentest passes.
+
+## Phase 13: Stable Qualification
+
+### 0.116.0 - Portability And Reproducible Artifacts
+
+Goal: qualify binaries and Wolfi artifacts across supported environments.
+
+Deliverables:
+
+- Linux x86_64/aarch64, macOS x86_64/aarch64, Windows targets where supported,
+  and practical BSD build/test evidence;
+- hardened Linux-only Wolfi image, SBOM, provenance, checksums, and signatures;
+- deterministic release scripts and platform assurance matrix.
+
+Verification:
+
+- clean-VM build/smoke, reproducibility, install, upgrade, and rollback tests.
+
+Exit criteria:
+
+- Artifacts trace to exact source without developer-local state.
+- Focused `0.116.0` supply-chain and portability pentest passes.
+
+### 0.117.0 - API, Documentation, And Parity Closeout
+
+Goal: close every planned inventory item before compatibility freeze.
+
+Deliverables:
+
+- complete system subset, OpenAPI, path help, and version history;
+- every parity item implemented, experimental, or deliberately different;
+- complete user, operator, API, config, migration, recovery, and limitation docs.
+
+Verification:
+
+- endpoint inventory, compatibility, links, examples, stale-version, and docs audit.
+
+Exit criteria:
+
+- No capability is silently missing, implied compatible, or undocumented.
+- Focused `0.117.0` API/parity/documentation pentest passes.
+
+### 0.118.0 - Composed Security Campaign And RC Freeze
+
+Goal: prove composition at scale and freeze stable compatibility.
+
+Deliverables:
+
+- parser/format fuzzing, Miri, Loom, property, model, and destructive campaigns;
+- full storage, audit, seal, token, lease, auth, Raft, adapter, plugin, backup,
+  recovery, resource, and denial-of-service evidence;
+- final API/storage/audit/plugin/crypto contracts, residual risks, runbooks,
+  release artifacts, SBOM, provenance, and evidence.
+
+Verification:
+
+- long-running campaigns, all-format migrations, full portability/Wolfi matrix,
+  multi-node/multi-namespace/provider/extension disaster scenario, and clean gates.
 
 Exit criteria:
 
 - Only release-blocking fixes and documentation corrections may follow.
-- Independent `0.73.0` release-candidate pentest passes for the exact commit.
+- Independent `0.118.0` release-candidate pentest passes for the exact commit.
 
 ## 1.0.0 - First Stable Release
 
-Goal: release a documented, production-qualified, API-driven secrets manager
-whose stable profile is quantum-resistant under current cryptanalytic knowledge.
+Goal: release a documented, production-qualified API-driven secrets manager
+whose protected profile is quantum-resistant under current cryptanalytic knowledge.
 
 Deliverables:
 
-- all stable pre-1.0 capabilities, migration paths, and compatibility contracts;
-- mandatory hybrid/PQ production profile for protected roles with no silent
-  classical-only fallback;
-- standalone binaries, hardened Wolfi image, complete documentation, recovery
-  runbooks, SBOM, provenance, checksums, signatures, and signed release evidence;
-- experimental features remain isolated, disabled by default, and outside the
-  stable compatibility promise.
+- all stable pre-1.0 capabilities, profiles, migrations, and contracts;
+- protected profile requiring hybrid/PQ transport, services, checkpoints, and
+  authentication assurance with no silent classical fallback;
+- standalone binaries, hardened Wolfi image, complete docs, recovery runbooks,
+  SBOM, provenance, checksums, signatures, and signed evidence;
+- previews isolated, disabled by default, and outside stable compatibility.
 
 Verification:
 
-- every repository, release, portability, migration, compatibility, backup,
-  restore, Raft, adapter, plugin, and disaster-recovery gate from a clean checkout;
-- independent review of cryptography, storage, memory, audit, token/lease,
-  policy, cluster identity, extensions, and supply chain;
-- all findings fixed or explicitly documented as accepted residual risk.
+- every repository, release, portability, migration, API, storage, recovery,
+  Raft, adapter, plugin, profile, and disaster-recovery gate from clean checkout;
+- independent review of cryptography, storage, memory, transport, audit,
+  authorization, tokens, identity, clustering, extensions, and supply chain;
+- every finding fixed or explicitly accepted as documented residual risk.
 
 Exit criteria:
 
-- The exact release candidate has green CI, reproducible artifacts, complete
-  evidence, no unresolved release blocker, and maintainer sign-off.
-- STOP: run the final independent `1.0.0` pentest for the exact commit; only
-  after it passes may the signed `v1.0.0` tag and release be published.
+- Exact candidate has green CI, reproducible artifacts, complete evidence,
+  no unresolved blocker, and maintainer sign-off.
+- STOP: final independent `1.0.0` pentest passes for the exact commit before the
+  signed `v1.0.0` tag and release are published.
