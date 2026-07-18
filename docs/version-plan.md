@@ -2008,7 +2008,27 @@ Deliverables:
   proof-job/proof-seed count and bytes, each destination's frozen result-manifest
   count and bytes, and checkpoint/inclusion-proof construction workspace; start
   fails unless every reservation is confirmed and retained through proof availability
-  or idempotent cancellation;
+  or a terminal pre-acceptance cancellation;
+- each participant has a closed strict reservation lifecycle: `Preparing -> Reserved
+  -> Activated -> AcceptanceCommitted -> ProofPending -> ProofAvailable -> Released`;
+  `Cancelled` is reachable only from `Preparing`, `Reserved`, or `Activated` after
+  durable rotation cancellation;
+- strict reservations in `AcceptanceCommitted` or `ProofPending` cannot be cancelled
+  or released; proof work and reservation ownership may only pause, resume, or
+  transfer through the `0.19.0` takeover contract;
+- every release is a compare-and-set bound to exact operation ID, participant,
+  reservation generation, and expected current state; stale, replayed,
+  cross-operation, cross-participant, or generation-substituted release fails closed;
+- destination reservations have no disappearance lease or TTL release; a compliant
+  destination retains its manifest reservation through source loss, restart,
+  partition, removal, or operator cancellation after acceptance;
+- partial source/destination/checkpoint reservation acquisition uses `0.19.0`
+  indeterminate-effect reconciliation: persist each acknowledgement, query every
+  participant after ambiguity, and compensate only confirmed reservations whose
+  operation remains pre-acceptance;
+- immediately before `Activated`, source revalidates every participant reservation,
+  generation, capacity, and state; after `AcceptanceCommitted`, source loss,
+  destination removal, or operator action cannot erase strict evidence obligations;
 - strict admission also requires compatible `0.74.0` checkpoint topology, available
   signer/trust history, capacity for configured rotation rate, and maximum checkpoint
   latency within pending-proof count/byte/age budgets on both source and destination;
@@ -2096,6 +2116,12 @@ Verification:
   rotations, duplicate proof jobs, count/byte/age admission backpressure, degraded
   health, concurrent reservation race/release, restore with backlog, and eventual
   checkpoint recovery tests;
+- partial multi-destination acquisition, lost reserve/release response, source crash
+  during acquisition, destination restart, pre-activation generation revalidation,
+  and indeterminate reservation takeover/reconciliation tests;
+- stale or cross-operation release after acceptance, generation/participant
+  substitution, concurrent cancellation versus acceptance, source disappearance,
+  destination removal, and forbidden TTL/lease cleanup tests;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2134,6 +2160,8 @@ Exit criteria:
   bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
   a witnessed and fenced destination can become authoritative, and one cluster owns
   each dynamic lease.
+- Strict reservations release only after `ProofAvailable` or terminal
+  pre-acceptance cancellation; no post-acceptance event can discard required evidence.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
