@@ -1898,6 +1898,10 @@ Deliverables:
   `RetirementDeferred` from `WriteEpochActive`, `Rewrapping`, or
   `AwaitingDestinationAck`, recording its exact origin state and durable cursor,
   while removal can enter terminal `DestinationFenced` from any non-retired state;
+- result-manifest replacement has the source-side sub-state machine
+  `GenerationFenced -> RebuildCapacityReserved -> DestinationRebuilding ->
+  AwaitingDestinationAck`; one expected generation, command ID, and reservation
+  generation own the transition, so concurrent rebuild attempts cannot fork it;
 - activation atomically makes the new epoch write-active and the old epoch
   decrypt-only through one durable source-side compare-and-set; activation and
   cancellation race through that same state revision, and `WriteEpochActive` makes
@@ -1915,6 +1919,15 @@ Deliverables:
   acceptance/evidence records, and retained checkpoint material; it remains
   operation-bound from `WriteEpochActive` through `ProofAvailable` and cannot be
   released by pause or `RetirementDeferred`;
+- immutable operation configuration sets hard per-operation and per-destination
+  limits for retained manifest generations, quarantine bytes, and rebuild attempts;
+  every active or quarantined full manifest counts against the applicable generation
+  and byte limits, while the source always fences an invalid current generation even
+  when the attempt limit prevents another replacement;
+- a separate bounded quarantine/evidence reservation is keyed by operation,
+  destination, manifest generation, and reservation generation; it cannot borrow
+  proof-retention or transient execution capacity, and replacement construction is
+  forbidden until enough count and byte capacity is durably reserved;
 - transient execution capacity covers worker slots, scratch buffers, transport
   windows, and provider concurrency; it may be released while deferred, but resume
   requires idempotent operation-bound readmission that cannot duplicate either
@@ -1974,26 +1987,47 @@ Deliverables:
   rejects old-generation certificates, pages, and completion messages, records the
   rebuild reason, and persists the fresh challenge, expected destination
   identity/suite, and idempotent destination command ID; this fence is authoritative
-  after source crash or takeover without destination acknowledgement;
-- second, the source issues a hybrid-authenticated rebuild command binding command
-  and operation IDs, frozen source-scope root, old/new manifest generations, rebuild
-  reason, and the persisted fresh challenge, expected destination identity, and
-  committed suite; the destination quarantines the old signed manifest as immutable
-  evidence, never mutates or silently reuses it, and idempotently constructs a new
-  immutable manifest and certificate before returning an authenticated
-  acknowledgement bound to the command ID, new generation, result root, and
-  certificate digest;
+  after source crash or takeover without destination acknowledgement and enters
+  `GenerationFenced` even when no rebuild capacity is available;
+- after fencing, the source either consumes preallocated strict-policy rebuild
+  headroom or reconciles a generation-bound quarantine/evidence reservation through
+  `0.19.0`; success compare-and-sets `GenerationFenced -> RebuildCapacityReserved`,
+  atomically consumes one rebuild attempt, and limit or capacity failure leaves the
+  operation fenced with typed degraded health and cannot restore the old generation,
+  delete evidence, or start rebuild;
+- before destination I/O, the source compare-and-sets
+  `RebuildCapacityReserved -> DestinationRebuilding`; it then issues a
+  hybrid-authenticated rebuild command binding command and operation IDs, frozen
+  source-scope root, old/new manifest and reservation generations, rebuild reason,
+  and the persisted fresh challenge, expected destination identity, and committed
+  suite;
+- the destination rejects absent, stale, undersized, or substituted rebuild
+  reservations, quarantines the old signed manifest as immutable evidence, never
+  mutates or silently reuses it, and idempotently constructs a new immutable manifest
+  and certificate before returning an authenticated acknowledgement bound to the
+  command ID, new generation, result root, reservation generation, and certificate
+  digest;
 - destination rebuild delivery is an `Indeterminate` external effect under `0.19.0`:
   lost requests or acknowledgements are queried and replayed by command ID, duplicate
   delivery returns the same result, and takeover reconciles destination state before
   sending; source safety never depends on an immediate acknowledgement because the
   old generation was fenced locally before the external effect;
 - source accepts a rebuild acknowledgement only for the exact persisted command and
-  operation IDs, new generation, destination identity/suite, result root, and
-  certificate digest; it revalidates the immutable manifest and certificate against
-  the frozen source scope, then compare-and-sets the rebuild subphase to
-  `AwaitingDestinationAck`, while duplicate acknowledgement returns that same state
-  and any mismatch leaves the source fence in force;
+  operation IDs, new manifest and reservation generations, destination
+  identity/suite, result root, and certificate digest; it revalidates the immutable
+  manifest and certificate against the frozen source scope, then compare-and-sets the
+  rebuild subphase to `AwaitingDestinationAck`, while duplicate acknowledgement
+  returns that same state and any mismatch leaves the source fence in force;
+- the evidence policy fixed at operation admission defines separate conditions for
+  retaining a full quarantined manifest, reducing it to authenticated
+  certificate/root metadata, and deleting that metadata; strict mode cannot compact
+  before `ProofAvailable`, active legal/incident holds forbid reduction, and every
+  disposition durably records operation/destination/generation, manifest and
+  certificate digests, root/cardinality, rebuild reason, policy revision, and audit
+  evidence before atomically reducing its quarantine reservation;
+- storage pressure, quota exhaustion, or demand from another operation never compacts
+  or deletes quarantined evidence; these conditions apply backpressure and degraded
+  health until the configured evidence condition is met or capacity is expanded;
 - every bounded resumable result page carries a hybrid-authenticated page transcript
   and Merkle range proof binding operation ID, source scope root, result root,
   manifest generation, index/range, continuation cursor, and total cardinality;
@@ -2062,10 +2096,14 @@ Deliverables:
 - strict-policy admission obtains operation-bound mandatory retention reservations
   for source proof-job/proof-seed count and bytes, each destination's frozen
   result-manifest count and bytes, and retained checkpoint/inclusion-proof material,
-  plus separate transient execution admission; start fails unless all mandatory
-  reservations and initial execution capacity are confirmed, while mandatory
-  reservations remain through proof availability or terminal pre-activation
-  cancellation;
+  plus separate transient execution admission and one closed rebuild-capacity
+  strategy: either reserve the configured worst-case retained generation count and
+  quarantine bytes initially, or require a generation-bound reservation after each
+  source fence and before replacement construction; start fails unless all initial
+  mandatory reservations and execution capacity are confirmed; mandatory strict
+  reservations remain through `ProofAvailable` or terminal pre-activation
+  cancellation, while each quarantine reservation remains until its configured
+  evidence disposition atomically reduces or releases it;
 - each participant's mandatory retention reservation has the closed lifecycle
   `Preparing -> Reserved -> Activated -> AcceptanceCommitted -> ProofPending ->
   ProofAvailable -> Released`;
@@ -2204,6 +2242,14 @@ Verification:
   page delivery during rebuild, concurrent takeover, cross-generation substitution,
   attempted quarantined-certificate reuse, forged or mismatched acknowledgement, and
   duplicate acknowledgement after source transition tests;
+- repeated invalidation up to and beyond manifest-generation and rebuild-attempt
+  limits, quarantine-byte exhaustion, replacement-reservation failure, crash between
+  fencing and reservation, concurrent rebuild reservation/command attempts, stale or
+  undersized reservation substitution, and preallocated-versus-per-rebuild accounting
+  tests;
+- full-manifest compaction and metadata deletion occur only after their configured
+  evidence conditions; proof-pending strict mode, legal/incident hold, storage
+  pressure, and quota exhaustion alone preserve evidence and accounting;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2248,7 +2294,9 @@ Exit criteria:
   execution resumes without duplicate accounting, and signed-manifest rebuild first
   fences the old generation at the source and then reconciles an idempotent
   destination effect without mutating or reusing quarantined evidence; only an exact
-  validated acknowledgement can exit the rebuild subphase;
+  validated acknowledgement can exit the rebuild subphase, rebuild count/bytes are
+  hard-bounded, capacity failure remains safely fenced, and evidence is reduced only
+  by its declared policy rather than storage pressure;
   compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
