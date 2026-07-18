@@ -1966,13 +1966,28 @@ Deliverables:
 - destination durably persists and freezes the canonical result manifest before
   signing its root, retaining it until source acceptance and evidence-retention
   requirements complete; unavailable or changed post-signing manifests fail closed;
-- when a signed result manifest can no longer be validated, one durable
-  compare-and-set advances its generation, invalidates the old certificate,
-  challenge, and page-authentication context, and returns to the result-manifest
-  rebuild subphase of `Rewrapping`; the old generation remains rejected after crash
-  or takeover, rebuild uses the unchanged frozen source scope, and a fresh challenge,
-  immutable manifest, and certificate are required before `AwaitingDestinationAck`;
-  a previously signed manifest is never mutated or silently reused;
+- when a signed result manifest can no longer be validated, rebuild uses two explicit
+  coordinated durability boundaries rather than claiming a cross-cluster atomic
+  update;
+- first, one source-local compare-and-set advances the expected result-manifest
+  generation, revokes the old challenge and page-authentication context, permanently
+  rejects old-generation certificates, pages, and completion messages, records the
+  rebuild reason, and persists the fresh challenge, expected destination
+  identity/suite, and idempotent destination command ID; this fence is authoritative
+  after source crash or takeover without destination acknowledgement;
+- second, the source issues a hybrid-authenticated rebuild command binding command
+  and operation IDs, frozen source-scope root, old/new manifest generations, rebuild
+  reason, and the persisted fresh challenge, expected destination identity, and
+  committed suite; the destination quarantines the old signed manifest as immutable
+  evidence, never mutates or silently reuses it, and idempotently constructs a new
+  immutable manifest and certificate before returning an authenticated
+  acknowledgement bound to the command ID, new generation, result root, and
+  certificate digest;
+- destination rebuild delivery is an `Indeterminate` external effect under `0.19.0`:
+  lost requests or acknowledgements are queried and replayed by command ID, duplicate
+  delivery returns the same result, and takeover reconciles destination state before
+  sending; source safety never depends on an immediate acknowledgement because the
+  old generation was fenced locally before the external effect;
 - every bounded resumable result page carries a hybrid-authenticated page transcript
   and Merkle range proof binding operation ID, source scope root, result root,
   manifest generation, index/range, continuation cursor, and total cardinality;
@@ -2177,7 +2192,11 @@ Verification:
   release, resume without double reservation, and durable-cursor continuation tests;
 - deferral after certificate signing, unchanged-manifest resume, stale certificate
   reuse, result-manifest generation advancement, identity/suite change during
-  deferral, and crash while invalidating an old signed generation tests;
+  deferral, and crash while fencing an old signed generation tests;
+- source crash after fencing before command delivery, lost rebuild command or
+  acknowledgement, destination restart, duplicate rebuild delivery, old-generation
+  page delivery during rebuild, concurrent takeover, cross-generation substitution,
+  and attempted quarantined-certificate reuse tests;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2219,8 +2238,10 @@ Exit criteria:
 - Strict mandatory-retention reservations release only after `ProofAvailable` or
   terminal pre-activation cancellation; once `WriteEpochActive` commits,
   cancellation cannot restore the old write epoch or discard that capacity; deferred
-  execution resumes without duplicate accounting or mutation/reuse of signed
-  manifests, and compromise-driven rotation cannot defer retirement.
+  execution resumes without duplicate accounting, and signed-manifest rebuild first
+  fences the old generation at the source and then reconciles an idempotent
+  destination effect without mutating or reusing quarantined evidence;
+  compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
