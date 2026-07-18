@@ -84,7 +84,7 @@ use them:
 - native outbound access uses the central destination-capability broker;
 - persisted formats are canonical, bounded, authenticated, versioned, fuzzed,
   and have migration or explicit rejection fixtures;
-- after `0.65.0`, every stateful component declares and tests backup preflight,
+- after `0.67.0`, every stateful component declares and tests backup preflight,
   snapshot/export, restore/import, vault/namespace rebinding, migration, and
   post-restore verification, or explicitly rejects backup participation;
 - backup admission inventories operation states, audit outboxes, idempotency
@@ -208,9 +208,9 @@ Exit criteria:
 - Persisted formats can authenticate suite identity without choosing providers.
 - Focused `0.4.0` suite-encoding and downgrade pentest passes.
 
-### 0.5.0 - Storage Capability Contract
+### 0.5.0 - Storage Consistency Capability Contract
 
-Goal: define authoritative storage across materially different consistency models.
+Goal: define authoritative storage semantics across materially different consistency models.
 
 Deliverables:
 
@@ -218,6 +218,29 @@ Deliverables:
 - snapshot-consistent pagination and caller-provided or streaming read buffers;
 - typed conflict, unavailable, corrupt, unsupported, and indeterminate errors;
 - backend capability declarations and hard key/value/batch limits;
+- typed `RequiredStorageCapabilities` covering linearizable CAS, atomic batch,
+  durable acknowledgment, snapshot reads, transactional audit outbox, migration
+  locking, and deterministic iteration;
+- startup and mount admission intersect requirements with backend capabilities;
+  unsupported compositions fail before routes are reachable and are never emulated.
+
+Verification:
+
+- conformance model, admission matrix, linearizable CAS, partial, duplicate,
+  delayed commit, and forbidden weak-emulation tests.
+
+Exit criteria:
+
+- Local, SQL, SurrealDB, and Raft consistency and durability semantics can be
+  declared honestly before any backend is selected.
+- Focused `0.5.0` storage-consistency contract pentest passes.
+
+### 0.6.0 - Storage Charge And Physical Health Contract
+
+Goal: bound storage reservations without claiming universally attributable physical bytes.
+
+Deliverables:
+
 - closed `StorageChargeCapability` with provider-neutral modes:
   - `ExactCommitted` returns attributable durable allocation units;
   - `ConservativeUpperBound` uses a documented versioned upper bound covering record
@@ -232,31 +255,24 @@ Deliverables:
   guards for WAL/log growth, replicas, temporary writes, compaction lag, and
   unattributable overhead; physical guards may reject writes but grant no cleanup or
   evidence-deletion authority;
-- typed `RequiredStorageCapabilities` covering linearizable CAS, atomic batch,
-  durable acknowledgment, snapshot reads, transactional audit outbox, migration
-  locking, deterministic iteration, accepted charge modes, and compatible charge
+- `RequiredStorageCapabilities` includes accepted charge modes and compatible charge
   formula versions;
-- startup and mount admission intersect requirements with backend capabilities;
-  unsupported compositions fail before routes are reachable and are never emulated;
 - migration, restore, or backend-version transition persists and verifies charge mode,
   formula version, and units; it reaccounts or increases reservations before enabling
   writes and cannot silently downgrade assurance or reduce an existing reservation.
 
 Verification:
 
-- conformance model, admission matrix, linearizable CAS, partial, duplicate,
-  delayed commit, and forbidden weak-emulation tests;
 - deterministic charge vectors, overflow/rounding boundaries, mode eligibility,
   physical-guard separation, and migration/restore assurance-transition tests.
 
 Exit criteria:
 
-- Local, SQL, SurrealDB, and Raft consistency, durability, charge, and physical-health
-  semantics can be declared honestly without treating logical or shared physical
-  bytes as exact attributable storage.
-- Focused `0.5.0` storage-contract pentest passes.
+- Every backend can declare charge and physical-health semantics without treating
+  logical or shared physical bytes as exact attributable storage.
+- Focused `0.6.0` storage-charge and physical-health pentest passes.
 
-### 0.6.0 - Authenticated Record Format
+### 0.7.0 - Authenticated Record Format
 
 Goal: specify bounded opaque records before implementing durable storage.
 
@@ -278,9 +294,9 @@ Verification:
 Exit criteria:
 
 - The record parser performs zero dynamic allocations and reveals no logical paths.
-- Focused `0.6.0` format and tampering pentest passes.
+- Focused `0.7.0` format and tampering pentest passes.
 
-### 0.7.0 - Secret Taxonomy And Secure Sources
+### 0.8.0 - Secret Taxonomy And Secure Sources
 
 Goal: define handling rules for all secret data and bootstrap credentials.
 
@@ -299,9 +315,9 @@ Verification:
 Exit criteria:
 
 - No secret-bearing config type is debug-serializable or accepted as a CLI argument.
-- Focused `0.7.0` secret-source and configuration pentest passes.
+- Focused `0.8.0` secret-source and configuration pentest passes.
 
-### 0.8.0 - Locked Secret Memory
+### 0.9.0 - Locked Secret Memory
 
 Goal: protect decoded application-owned plaintext with honest platform guarantees.
 
@@ -319,9 +335,9 @@ Exit criteria:
 
 - Decoded share/key material and application-owned plaintext avoid the ordinary
   application heap; bounded short-lived transport copies are documented.
-- Focused `0.8.0` memory-handling pentest passes.
+- Focused `0.9.0` memory-handling pentest passes.
 
-### 0.9.0 - Clock And Entropy Services
+### 0.10.0 - Clock And Entropy Services
 
 Goal: centralize time and CSPRNG behavior before state machines depend on them.
 
@@ -339,9 +355,9 @@ Verification:
 Exit criteria:
 
 - No security subsystem reads ambient clock or randomness directly.
-- Focused `0.9.0` time and entropy pentest passes.
+- Focused `0.10.0` time and entropy pentest passes.
 
-### 0.10.0 - Configuration Lifecycle
+### 0.11.0 - Configuration Lifecycle
 
 Goal: make configuration changes atomic, revisioned, and secret-safe.
 
@@ -360,9 +376,9 @@ Verification:
 Exit criteria:
 
 - A failed reload leaves the prior complete configuration active.
-- Focused `0.10.0` configuration lifecycle pentest passes.
+- Focused `0.11.0` configuration lifecycle pentest passes.
 
-### 0.11.0 - Operation State Contract
+### 0.12.0 - Operation State Contract
 
 Goal: define long-running operation semantics without persistence or public APIs.
 
@@ -384,9 +400,9 @@ Verification:
 Exit criteria:
 
 - Every operation family can map effects to one closed state transition contract.
-- Focused `0.11.0` operation-state-contract pentest passes.
+- Focused `0.12.0` operation-state-contract pentest passes.
 
-### 0.12.0 - Crypto Broker And Hierarchical Keys
+### 0.13.0 - Crypto Broker And Hierarchical Keys
 
 Goal: prevent engines from receiving master keys or broad decrypt authority.
 
@@ -410,9 +426,9 @@ Exit criteria:
 
 - Transit/PQ load cannot starve administrative security operations; after the
   seal fence commits, no pre-fence handle can perform or complete crypto work.
-- Focused `0.12.0` key hierarchy and broker-scheduling pentest passes.
+- Focused `0.13.0` key hierarchy and broker-scheduling pentest passes.
 
-### 0.13.0 - Foundational Database Egress
+### 0.14.0 - Foundational Database Egress
 
 Goal: provide destination-scoped database connectivity before external storage.
 
@@ -432,9 +448,9 @@ Verification:
 Exit criteria:
 
 - External storage cannot instantiate arbitrary network or database clients.
-- Focused `0.13.0` foundational database-egress pentest passes.
+- Focused `0.14.0` foundational database-egress pentest passes.
 
-### 0.14.0 - Durable Local Storage Backend
+### 0.15.0 - Durable Local Storage Backend
 
 Goal: implement a crash-safe single-node authoritative backend.
 
@@ -456,9 +472,9 @@ Exit criteria:
 
 - A committed record survives documented crashes or reports indeterminate state, and
   local storage declares and proves its actual charge-assurance profile.
-- Focused `0.14.0` local-storage pentest passes.
+- Focused `0.15.0` local-storage pentest passes.
 
-### 0.15.0 - PostgreSQL Storage Backend
+### 0.16.0 - PostgreSQL Storage Backend
 
 Goal: implement PostgreSQL as authoritative Lykilheim persistence.
 
@@ -482,9 +498,9 @@ Exit criteria:
 - PostgreSQL storage passes the same opaque-record contract as local storage and
   declares charge assurance without claiming exact per-object physical bytes when
   shared SQL storage cannot attribute them.
-- Focused `0.15.0` PostgreSQL storage-backend pentest passes.
+- Focused `0.16.0` PostgreSQL storage-backend pentest passes.
 
-### 0.16.0 - SurrealDB Storage Backend
+### 0.17.0 - SurrealDB Storage Backend
 
 Goal: implement SurrealDB as authoritative Lykilheim persistence.
 
@@ -507,9 +523,9 @@ Exit criteria:
 
 - SurrealDB never claims consistency, durability, or charge guarantees its selected
   deployment mode lacks.
-- Focused `0.16.0` SurrealDB storage-backend pentest passes.
+- Focused `0.17.0` SurrealDB storage-backend pentest passes.
 
-### 0.17.0 - Provider Registry And Crypto Migration
+### 0.18.0 - Provider Registry And Crypto Migration
 
 Goal: bind suite policy to providers without hard-coding one algorithm family.
 
@@ -532,11 +548,11 @@ Verification:
 Exit criteria:
 
 - Requests cannot choose arbitrary algorithms, providers, or silent fallback.
-- Focused `0.17.0` crypto-agility and symmetric-floor pentest passes.
+- Focused `0.18.0` crypto-agility and symmetric-floor pentest passes.
 
 ## Phase 2: Seal And Barrier
 
-### 0.18.0 - Symmetric Barrier Core
+### 0.19.0 - Symmetric Barrier Core
 
 Goal: encrypt authenticated segmented records behind the broker.
 
@@ -563,9 +579,9 @@ Exit criteria:
 
 - No plaintext reaches storage, and no restore/clone can resume writes in an old
   key/nonce namespace.
-- Focused `0.18.0` barrier pentest and cryptographic review pass.
+- Focused `0.19.0` barrier pentest and cryptographic review pass.
 
-### 0.19.0 - Internal Durable Operation Runtime
+### 0.20.0 - Internal Durable Operation Runtime
 
 Goal: persist and recover the operation-state contract behind the encrypted barrier.
 
@@ -588,9 +604,9 @@ Exit criteria:
 
 - Internal operations recover without duplicate effects; no public operation API
   exists before durable audit and policy authorization are available.
-- Focused `0.19.0` internal durable-operation runtime pentest passes.
+- Focused `0.20.0` internal durable-operation runtime pentest passes.
 
-### 0.20.0 - Initialization And Shamir Shares
+### 0.21.0 - Initialization And Shamir Shares
 
 Goal: atomically initialize a root-namespaced vault and split its seal secret.
 
@@ -640,9 +656,9 @@ Exit criteria:
 - Initialization commits only through an authenticated local ceremony after
   acknowledged share custody, persists no shares, creates one root namespace,
   and remains pending until first authority commits.
-- Focused `0.20.0` initialization and share-handling pentest passes.
+- Focused `0.21.0` initialization and share-handling pentest passes.
 
-### 0.21.0 - Bounded Unseal Lifecycle
+### 0.22.0 - Bounded Unseal Lifecycle
 
 Goal: reconstruct keys through one replay-resistant expiring attempt.
 
@@ -660,9 +676,9 @@ Verification:
 Exit criteria:
 
 - Invalid submissions reveal no share validity and leave no reusable partial state.
-- Focused `0.21.0` unseal transport and lifecycle pentest passes.
+- Focused `0.22.0` unseal transport and lifecycle pentest passes.
 
-### 0.22.0 - Crash-Safe Shamir Rekey
+### 0.23.0 - Crash-Safe Shamir Rekey
 
 Goal: change seal shares without mixing generations or crash ambiguity.
 
@@ -679,16 +695,16 @@ Verification:
 Exit criteria:
 
 - Recovery accepts one explicitly committed seal-share generation only.
-- Focused `0.22.0` Shamir rekey pentest passes.
+- Focused `0.23.0` Shamir rekey pentest passes.
 
-### 0.23.0 - Recovery Share Lifecycle
+### 0.24.0 - Recovery Share Lifecycle
 
 Goal: manage recovery shares independently from seal shares and recovery tokens.
 
 Deliverables:
 
 - rekey, threshold change, cancellation, loss handling, and generation binding
-  for the recovery share set created during `0.20.0`;
+  for the recovery share set created during `0.21.0`;
 - locked collector memory, duplicate/replay rules, and auto-unseal migration contract;
 - explicit distinction among recovery shares, seal shares, and generated recovery tokens.
 
@@ -699,9 +715,9 @@ Verification:
 Exit criteria:
 
 - Recovery-share operations cannot unseal directly or mix with a seal-share generation.
-- Focused `0.23.0` recovery-share lifecycle pentest passes.
+- Focused `0.24.0` recovery-share lifecycle pentest passes.
 
-### 0.24.0 - Barrier Rotation And Rewrap
+### 0.25.0 - Barrier Rotation And Rewrap
 
 Goal: separate rotation, rewrap, rekey, and suite migration lifecycles.
 
@@ -718,11 +734,11 @@ Verification:
 Exit criteria:
 
 - Rotation cannot strand ciphertext or reactivate retired write keys.
-- Focused `0.24.0` rotation and rewrap pentest passes.
+- Focused `0.25.0` rotation and rewrap pentest passes.
 
 ## Phase 3: API, Transport, Audit, And Policy
 
-### 0.25.0 - Canonical API And Concurrency Contract
+### 0.26.0 - Canonical API And Concurrency Contract
 
 Goal: define one bounded API pipeline before exposing network endpoints.
 
@@ -743,9 +759,9 @@ Exit criteria:
 
 - Every mutation/page has explicit retry semantics, and no listener makes a route
   reachable merely because the socket is bound.
-- Focused `0.25.0` API parser and idempotency pentest passes.
+- Focused `0.26.0` API parser and idempotency pentest passes.
 
-### 0.26.0 - Native API TLS
+### 0.27.0 - Native API TLS
 
 Goal: secure every network-accessible client endpoint before secret APIs ship.
 
@@ -763,9 +779,9 @@ Exit criteria:
 
 - TLS completion satisfies only the transport prerequisite; it cannot expose init,
   unseal, login, token, or secret routes before rate, audit, auth, and policy gates.
-- Focused `0.26.0` public API transport pentest passes.
+- Focused `0.27.0` public API transport pentest passes.
 
-### 0.27.0 - Bounded Layered Rate Control
+### 0.28.0 - Bounded Layered Rate Control
 
 Goal: replace unbounded process-local IP limiting with configurable controls.
 
@@ -794,11 +810,11 @@ Verification:
 Exit criteria:
 
 - Untrusted clients cannot cause unbounded limiter work or memory growth.
-- Focused `0.27.0` rate-control pentest passes.
+- Focused `0.28.0` rate-control pentest passes.
 
-### 0.28.0 - Typed Durable Audit Journal
+### 0.29.0 - Audit Record Cryptography And Redaction
 
-Goal: durably record security intent without blocking async executors.
+Goal: define one canonical, privacy-preserving security-event record and chain.
 
 Deliverables:
 
@@ -806,10 +822,28 @@ Deliverables:
 - per-record MAC, previous-record digest, journal epoch, and startup chain verification;
 - separate audit-authentication and sensitive-value hashing key handles, with rotation;
 - explicit corruption/truncation state and keyed hashing of sensitive identifiers;
+- main process canonicalizes/redacts, performs value hashing and record MAC with
+  broker-held keys, and emits immutable record bytes; audit keys never cross a writer
+  boundary.
+
+Verification:
+
+- canonical vectors, MAC, truncation, reorder, journal/value-hash key rotation,
+  sensitive-identifier correlation, and redaction leakage tests.
+
+Exit criteria:
+
+- Audit records are canonical, chain-authenticated, and redacted before they reach any sink.
+- Focused `0.29.0` audit-record cryptography and leakage pentest passes.
+
+### 0.30.0 - Isolated Durable Audit Writer
+
+Goal: durably persist canonical audit records without blocking async executors.
+
+Deliverables:
+
 - bounded writer subprocess for the high-assurance profile; an isolated pool is
   permitted only in documented lower-assurance development deployments;
-- main process canonicalizes/redacts, performs value hashing and record MAC with
-  broker-held keys, then sends immutable record bytes; audit keys never cross IPC;
 - authenticated sequence-bound IPC with per-launch subprocess identity/session,
   bounded frames, queue integrity, and impersonation/replay rejection;
 - ACK binds journal epoch, sequence, and record digest and means the record and
@@ -828,16 +862,16 @@ Deliverables:
 
 Verification:
 
-- disk/queue full, fsync, timeout, panic, MAC, truncation, reorder, key rotation,
-  IPC replay/impersonation/corruption, queued-versus-fsynced ACK, late ACK, seal,
-  subprocess death/restart handshake, and redaction tests.
+- disk/queue full, fsync, timeout, panic, IPC replay/impersonation/corruption,
+  queued-versus-fsynced ACK, late ACK, seal, and subprocess death/restart tests.
 
 Exit criteria:
 
-- Writer failure cannot starve health or manual seal control paths.
-- Focused `0.28.0` audit durability and leakage pentest passes.
+- Writer failure cannot starve health or manual seal control paths, and queued data is
+  never reported as durably audited.
+- Focused `0.30.0` isolated audit-writer pentest passes.
 
-### 0.29.0 - Fail-Closed Audit Transaction Gate
+### 0.31.0 - Fail-Closed Audit Transaction Gate
 
 Goal: prevent mutation or secret release before required audit evidence commits.
 
@@ -854,9 +888,9 @@ Verification:
 Exit criteria:
 
 - Audit failure blocks secret-bearing reads and security mutations.
-- Focused `0.29.0` audit bypass and partial-commit pentest passes.
+- Focused `0.31.0` audit bypass and partial-commit pentest passes.
 
-### 0.30.0 - Policy Compiler And Evaluator
+### 0.32.0 - Policy Compiler And Evaluator
 
 Goal: enforce deterministic default-deny capabilities over canonical requests.
 
@@ -882,9 +916,9 @@ Exit criteria:
 
 - Every protected operation has a typed capability and releases effects only
   while its complete decision context remains current.
-- Focused `0.30.0` policy bypass and ambiguity pentest passes.
+- Focused `0.32.0` policy bypass and ambiguity pentest passes.
 
-### 0.31.0 - Mounts And Barrier Views
+### 0.33.0 - Mounts And Barrier Views
 
 Goal: isolate engines by immutable mount identity and lifecycle contract.
 
@@ -901,11 +935,11 @@ Verification:
 Exit criteria:
 
 - A mount cannot access another mount's storage, keys, namespace, or authority.
-- Focused `0.31.0` mount-isolation pentest passes.
+- Focused `0.33.0` mount-isolation pentest passes.
 
 ## Phase 4: Tokens, Bootstrap, Leases, And Static Secrets
 
-### 0.32.0 - Token Engine
+### 0.34.0 - Token Engine
 
 Goal: issue independently random tokens with atomic lifecycle semantics.
 
@@ -937,9 +971,9 @@ Exit criteria:
 
 - Service-token revocation wins every race; batch-token exceptions are bounded,
   short-lived, policy-visible, and never described as ordinary individual revocation.
-- Focused `0.32.0` token pentest passes.
+- Focused `0.34.0` token pentest passes.
 
-### 0.33.0 - Bootstrap, Root, And Recovery Tokens
+### 0.35.0 - Bootstrap, Root, And Recovery Tokens
 
 Goal: complete initialization and quorum-controlled administrative bootstrap.
 
@@ -960,9 +994,9 @@ Exit criteria:
 
 - Pending bootstrap becomes `Active` exactly once; crash or retry cannot issue a
   second initial authority or expose normal routes early.
-- Focused `0.33.0` bootstrap/root/recovery pentest passes.
+- Focused `0.35.0` bootstrap/root/recovery pentest passes.
 
-### 0.34.0 - Lease And Expiration Engine
+### 0.36.0 - Lease And Expiration Engine
 
 Goal: make dynamic leases durable, idempotent, bounded, and recoverable.
 
@@ -982,9 +1016,9 @@ Verification:
 Exit criteria:
 
 - Cleanup delay or crash cannot extend durable authorization.
-- Focused `0.34.0` lease lifecycle pentest passes.
+- Focused `0.36.0` lease lifecycle pentest passes.
 
-### 0.35.0 - Response Wrapping And Cubbyhole
+### 0.37.0 - Response Wrapping And Cubbyhole
 
 Goal: provide at-most-once delivery and token-private storage after tokens exist.
 
@@ -1004,9 +1038,9 @@ Verification:
 Exit criteria:
 
 - Wrapping is at-most-once and Cubbyhole is cross-token isolated.
-- Focused `0.35.0` wrapping and Cubbyhole pentest passes.
+- Focused `0.37.0` wrapping and Cubbyhole pentest passes.
 
-### 0.36.0 - KV v2
+### 0.38.0 - KV v2
 
 Goal: deliver bounded versioned static secret storage.
 
@@ -1026,9 +1060,9 @@ Verification:
 Exit criteria:
 
 - Destroy removes active logical recovery while documenting physical limitations.
-- Focused `0.36.0` KV v2 pentest passes.
+- Focused `0.38.0` KV v2 pentest passes.
 
-### 0.37.0 - Identity Entities And Groups
+### 0.39.0 - Identity Entities And Groups
 
 Goal: attach policy to bounded stable identities rather than login records.
 
@@ -1045,9 +1079,9 @@ Verification:
 Exit criteria:
 
 - Group traversal cannot grant cross-identity authority or exhaust evaluation.
-- Focused `0.37.0` identity and group pentest passes.
+- Focused `0.39.0` identity and group pentest passes.
 
-### 0.38.0 - Namespace Isolation
+### 0.40.0 - Namespace Isolation
 
 Goal: enforce hierarchical tenant isolation and cryptographic deletion.
 
@@ -1064,9 +1098,9 @@ Verification:
 Exit criteria:
 
 - No tenant can enumerate or operate on another tenant's resources.
-- Focused `0.38.0` namespace isolation pentest passes.
+- Focused `0.40.0` namespace isolation pentest passes.
 
-### 0.39.0 - AppRole Authentication
+### 0.41.0 - AppRole Authentication
 
 Goal: provide replay-resistant machine authentication.
 
@@ -1083,9 +1117,9 @@ Verification:
 Exit criteria:
 
 - SecretID consumption and token issuance cannot partially commit.
-- Focused `0.39.0` AppRole pentest passes.
+- Focused `0.41.0` AppRole pentest passes.
 
-### 0.40.0 - Userpass And Password Policy
+### 0.42.0 - Userpass And Password Policy
 
 Goal: support local human authentication with production guardrails.
 
@@ -1101,11 +1135,11 @@ Verification:
 Exit criteria:
 
 - User enumeration and lockout cannot bypass policy or disclose credentials.
-- Focused `0.40.0` userpass pentest passes.
+- Focused `0.42.0` userpass pentest passes.
 
 ## Phase 5: Native Egress And Authentication Assurance
 
-### 0.41.0 - HTTP And Cloud Egress Expansion
+### 0.43.0 - HTTP And Cloud Egress Expansion
 
 Goal: extend foundational database egress for HTTP auth, cloud, and providers.
 
@@ -1123,9 +1157,9 @@ Verification:
 Exit criteria:
 
 - Native HTTP/cloud integrations cannot instantiate arbitrary outbound clients.
-- Focused `0.41.0` egress and SSRF pentest passes.
+- Focused `0.43.0` egress and SSRF pentest passes.
 
-### 0.42.0 - Authentication Assurance Model
+### 0.44.0 - Authentication Assurance Model
 
 Goal: let policy distinguish how strongly an identity was authenticated.
 
@@ -1143,9 +1177,9 @@ Verification:
 Exit criteria:
 
 - Successful authentication cannot imply assurance the upstream did not provide.
-- Focused `0.42.0` assurance-label pentest passes.
+- Focused `0.44.0` assurance-label pentest passes.
 
-### 0.43.0 - JWT Authentication
+### 0.45.0 - JWT Authentication
 
 Goal: validate bounded JWT assertions through explicit issuer policy.
 
@@ -1161,9 +1195,9 @@ Verification:
 Exit criteria:
 
 - Tokens cannot select validation algorithms, keys, namespaces, or assurance.
-- Focused `0.43.0` JWT pentest passes.
+- Focused `0.45.0` JWT pentest passes.
 
-### 0.44.0 - OIDC Authentication
+### 0.46.0 - OIDC Authentication
 
 Goal: support browser/device login without weakening JWT validation.
 
@@ -1179,9 +1213,9 @@ Verification:
 Exit criteria:
 
 - OIDC flow authority remains bound to its configured issuer and callback.
-- Focused `0.44.0` OIDC pentest passes.
+- Focused `0.46.0` OIDC pentest passes.
 
-### 0.45.0 - TLS Certificate Authentication
+### 0.47.0 - TLS Certificate Authentication
 
 Goal: authenticate mTLS clients independently from API transport setup.
 
@@ -1197,9 +1231,9 @@ Verification:
 Exit criteria:
 
 - Transport success alone never grants certificate-auth identity.
-- Focused `0.45.0` TLS certificate-auth pentest passes.
+- Focused `0.47.0` TLS certificate-auth pentest passes.
 
-### 0.46.0 - Kubernetes Authentication
+### 0.48.0 - Kubernetes Authentication
 
 Goal: authenticate Kubernetes workloads within explicit trust domains.
 
@@ -1215,9 +1249,9 @@ Verification:
 Exit criteria:
 
 - Kubernetes identity cannot escape its configured cluster trust domain.
-- Focused `0.46.0` Kubernetes-auth pentest passes.
+- Focused `0.48.0` Kubernetes-auth pentest passes.
 
-### 0.47.0 - Cloud Workload Authentication
+### 0.49.0 - Cloud Workload Authentication
 
 Goal: authenticate AWS, Azure, and GCP workloads without ambient credentials.
 
@@ -1233,9 +1267,9 @@ Verification:
 Exit criteria:
 
 - Cloud identity is bound to an explicit provider trust domain and role.
-- Focused `0.47.0` cloud-workload-auth pentest passes.
+- Focused `0.49.0` cloud-workload-auth pentest passes.
 
-### 0.48.0 - LDAP Authentication
+### 0.50.0 - LDAP Authentication
 
 Goal: add bounded LDAP user/group authentication.
 
@@ -1251,9 +1285,9 @@ Verification:
 Exit criteria:
 
 - LDAP results cannot inject identity, groups, namespace, or policy.
-- Focused `0.48.0` LDAP-auth pentest passes.
+- Focused `0.50.0` LDAP-auth pentest passes.
 
-### 0.49.0 - Kerberos Authentication
+### 0.51.0 - Kerberos Authentication
 
 Goal: add channel-bound Kerberos authentication after dependency review.
 
@@ -1269,9 +1303,9 @@ Verification:
 Exit criteria:
 
 - Kerberos delegation cannot silently become broader vault authority.
-- Focused `0.49.0` Kerberos-auth pentest passes.
+- Focused `0.51.0` Kerberos-auth pentest passes.
 
-### 0.50.0 - RADIUS Authentication
+### 0.52.0 - RADIUS Authentication
 
 Goal: add bounded RADIUS authentication with explicit transport limitations.
 
@@ -1287,9 +1321,9 @@ Verification:
 Exit criteria:
 
 - RADIUS limitations and assurance are visible to policy and operators.
-- Focused `0.50.0` RADIUS-auth pentest passes.
+- Focused `0.52.0` RADIUS-auth pentest passes.
 
-### 0.51.0 - GitHub Authentication
+### 0.53.0 - GitHub Authentication
 
 Goal: support bounded GitHub operator auth where OIDC is not suitable.
 
@@ -1305,9 +1339,9 @@ Verification:
 Exit criteria:
 
 - GitHub availability or stale membership cannot silently grant authority.
-- Focused `0.51.0` GitHub-auth pentest passes.
+- Focused `0.53.0` GitHub-auth pentest passes.
 
-### 0.52.0 - Multi-Factor Authentication
+### 0.54.0 - Multi-Factor Authentication
 
 Goal: strengthen identities with policy-bound second factors.
 
@@ -1323,11 +1357,11 @@ Verification:
 Exit criteria:
 
 - MFA assurance cannot outlive or detach from the authenticated identity/session.
-- Focused `0.52.0` MFA pentest passes.
+- Focused `0.54.0` MFA pentest passes.
 
 ## Phase 6: Cryptographic Engines And Protected Transport
 
-### 0.53.0 - Transit Classical Baseline
+### 0.55.0 - Transit Classical Baseline
 
 Goal: provide symmetric cryptographic services without exporting raw keys.
 
@@ -1344,9 +1378,9 @@ Verification:
 Exit criteria:
 
 - Transit never exports keys or silently weakens policy.
-- Focused `0.53.0` Transit pentest and crypto review pass.
+- Focused `0.55.0` Transit pentest and crypto review pass.
 
-### 0.54.0 - Post-Quantum Provider Baseline
+### 0.56.0 - Post-Quantum Provider Baseline
 
 Goal: admit production-capable PQ providers without structural monoculture.
 
@@ -1366,9 +1400,9 @@ Verification:
 Exit criteria:
 
 - PQ providers fail closed and remain replaceable by suite policy.
-- Focused `0.54.0` independent PQ-provider pentest and crypto review pass.
+- Focused `0.56.0` independent PQ-provider pentest and crypto review pass.
 
-### 0.55.0 - Hybrid Transit Envelopes
+### 0.57.0 - Hybrid Transit Envelopes
 
 Goal: combine classical and PQ protection without downgrade paths.
 
@@ -1390,9 +1424,9 @@ Verification:
 Exit criteria:
 
 - Hybrid policy never accepts either component alone or retries classical-only.
-- Focused `0.55.0` hybrid-envelope pentest and crypto review pass.
+- Focused `0.57.0` hybrid-envelope pentest and crypto review pass.
 
-### 0.56.0 - Hybrid Public API Transport
+### 0.58.0 - Hybrid Public API Transport
 
 Goal: protect ordinary client-to-vault traffic with the quantum-resistant profile.
 
@@ -1412,9 +1446,9 @@ Verification:
 Exit criteria:
 
 - Protected secret endpoints reject connections below configured hybrid assurance.
-- Focused `0.56.0` public hybrid-transport pentest and crypto review pass.
+- Focused `0.58.0` public hybrid-transport pentest and crypto review pass.
 
-### 0.57.0 - Classical PKI Core
+### 0.59.0 - Classical PKI Core
 
 Goal: issue constrained classical certificates through isolated PKI keys.
 
@@ -1430,9 +1464,9 @@ Verification:
 Exit criteria:
 
 - Issuance cannot exceed issuer, role, namespace, or policy constraints.
-- Focused `0.57.0` classical PKI pentest and crypto review pass.
+- Focused `0.59.0` classical PKI pentest and crypto review pass.
 
-### 0.58.0 - Quantum-Resistant PKI
+### 0.60.0 - Quantum-Resistant PKI
 
 Goal: provide standards-based PQ and hybrid certificate modes.
 
@@ -1452,9 +1486,9 @@ Verification:
 Exit criteria:
 
 - Stable modes use final standards and never present draft PKI as final.
-- Focused `0.58.0` PQ PKI pentest and crypto review pass.
+- Focused `0.60.0` PQ PKI pentest and crypto review pass.
 
-### 0.59.0 - Transit Completion
+### 0.61.0 - Transit Completion
 
 Goal: complete the stable Transit surface independently from PKI.
 
@@ -1470,9 +1504,9 @@ Verification:
 Exit criteria:
 
 - Every Transit operation has explicit key lifecycle and misuse semantics.
-- Focused `0.59.0` Transit-completion pentest passes.
+- Focused `0.61.0` Transit-completion pentest passes.
 
-### 0.60.0 - PKI Completion
+### 0.62.0 - PKI Completion
 
 Goal: complete the stable PKI protocol and issuer surface.
 
@@ -1488,9 +1522,9 @@ Verification:
 Exit criteria:
 
 - PKI protocol behavior is bounded, documented, and independently recoverable.
-- Focused `0.60.0` PKI-completion pentest passes.
+- Focused `0.62.0` PKI-completion pentest passes.
 
-### 0.61.0 - Hardware And Non-Exportable Providers
+### 0.63.0 - Hardware And Non-Exportable Providers
 
 Goal: support opaque keys whose provider lifecycle differs from software keys.
 
@@ -1507,9 +1541,9 @@ Verification:
 Exit criteria:
 
 - Software assumptions never cause export or loss of non-exportable keys.
-- Focused `0.61.0` hardware-provider pentest passes.
+- Focused `0.63.0` hardware-provider pentest passes.
 
-### 0.62.0 - KV v1 Engine
+### 0.64.0 - KV v1 Engine
 
 Goal: add bounded KV v1 compatibility without weakening KV v2.
 
@@ -1525,9 +1559,9 @@ Verification:
 Exit criteria:
 
 - KV v1 limitations cannot silently apply to KV v2 paths.
-- Focused `0.62.0` KV v1 pentest passes.
+- Focused `0.64.0` KV v1 pentest passes.
 
-### 0.63.0 - SSH Secrets Engine
+### 0.65.0 - SSH Secrets Engine
 
 Goal: issue bounded SSH OTP and CA credentials.
 
@@ -1543,9 +1577,9 @@ Verification:
 Exit criteria:
 
 - SSH credentials cannot exceed role or policy constraints.
-- Focused `0.63.0` SSH-engine pentest passes.
+- Focused `0.65.0` SSH-engine pentest passes.
 
-### 0.64.0 - TOTP Secrets Engine
+### 0.66.0 - TOTP Secrets Engine
 
 Goal: generate and validate isolated TOTP credentials.
 
@@ -1561,11 +1595,11 @@ Verification:
 Exit criteria:
 
 - Accepted codes cannot be replayed outside documented policy.
-- Focused `0.64.0` TOTP-engine pentest passes.
+- Focused `0.66.0` TOTP-engine pentest passes.
 
 ## Phase 7: Recovery, Operations, And Clustering
 
-### 0.65.0 - Encrypted Backup And Migration
+### 0.67.0 - Encrypted Backup And Migration
 
 Goal: make every admitted persisted state recoverable.
 
@@ -1587,9 +1621,9 @@ Verification:
 Exit criteria:
 
 - Restore never mutates live state before complete authenticated verification.
-- Focused `0.65.0` backup and migration pentest passes.
+- Focused `0.67.0` backup and migration pentest passes.
 
-### 0.66.0 - Rootless Wolfi Operations
+### 0.68.0 - Rootless Wolfi Operations
 
 Goal: operate native and hardened Wolfi deployments safely.
 
@@ -1606,49 +1640,64 @@ Verification:
 Exit criteria:
 
 - Service operation needs neither root nor hidden developer-local state.
-- Focused `0.66.0` container and operations pentest passes.
+- Focused `0.68.0` container and operations pentest passes.
 
-### 0.67.0 - Raft Consensus Core And Deterministic State Machine
+### 0.69.0 - Persistent Raft State And Deterministic Apply
 
-Goal: implement a complete persistent Raft core around deterministic encrypted apply.
+Goal: make encrypted Raft state crash-safe and deterministically replayable before networking.
 
 Deliverables:
 
 - persistent current term and voted-for with crash-safe ordering;
-- pre-vote, election, AppendEntries conflict resolution/log truncation,
-  check-quorum, and leadership transfer;
-- linearizable reads through ReadIndex; wall-clock leader leases are forbidden;
 - hard-state/log/commit fsync ordering before acknowledgment;
 - atomic snapshot installation bound to last index/term, membership configuration,
   storage format, and cryptographic incarnation;
 - corrupt/truncated hard-state, log, and snapshot detection/recovery;
-- bounded transport messages, append batches, in-flight replication windows,
-  peer queues, and snapshot chunks;
-- leader-finalized encrypted commands with nonce/ciphertext chosen before replication;
+- leader-finalized encrypted commands with nonce/ciphertext chosen before persistence;
 - deterministic follower apply, log/snapshot persistence, and backpressure;
 - declared `StorageChargeCapability` for Raft state-machine records with versioned
-  log/snapshot/index charge formulas, separate from quorum replica, log-retention,
+  log/snapshot/index charge formulas, separate from replica, log-retention,
   snapshot-temporary, and compaction-lag physical-health guards;
 - no barrier keys or follower-generated randomness in state-machine apply.
 
 Verification:
 
-- model tests for elections, split votes, partitions, stale leaders, ReadIndex,
-  transfer, AppendEntries conflicts, snapshot races, and membership changes;
-- fsync crash points, corrupt/truncated log recovery, bounded-message/window DoS,
-  deterministic replay, failover, and three-node conformance tests;
+- fsync crash points, corrupt/truncated log recovery, snapshot races, deterministic
+  replay, and identical-state tests;
 - charged-unit and formula-version vectors, checked bounds, snapshot/restore
-  transition, replica/log growth, compaction lag, and strict-admission eligibility
-  tests.
+  transition, log growth, compaction lag, and strict-admission eligibility tests.
 
 Exit criteria:
 
-- Hard state and committed logs survive documented crashes, linearizable reads do
-  not depend on wall time, identical commits produce identical follower state, and
-  Raft declares charge assurance separately from cluster physical-health headroom.
-- Focused `0.67.0` Raft consensus-core pentest passes.
+- Hard state and committed logs survive documented crashes, identical commits produce
+  identical state, and Raft charge assurance is separate from physical headroom.
+- Focused `0.69.0` persistent Raft-state pentest passes.
 
-### 0.68.0 - Cluster Trust Bootstrap And Hybrid Identity
+### 0.70.0 - Raft Elections, Replication, And Linearizable Reads
+
+Goal: add bounded network consensus around the deterministic Raft state machine.
+
+Deliverables:
+
+- pre-vote, election, AppendEntries conflict resolution/log truncation,
+  check-quorum, and leadership transfer;
+- linearizable reads through ReadIndex; wall-clock leader leases are forbidden;
+- bounded transport messages, append batches, in-flight replication windows,
+  peer queues, and snapshot chunks.
+
+Verification:
+
+- model tests for elections, split votes, partitions, stale leaders, ReadIndex,
+  transfer, AppendEntries conflicts, snapshot races, and membership changes;
+- bounded-message/window DoS, failover, and three-node conformance tests.
+
+Exit criteria:
+
+- Consensus survives modeled faults, linearizable reads do not depend on wall time,
+  and network input remains bounded.
+- Focused `0.70.0` Raft consensus and replication pentest passes.
+
+### 0.71.0 - Cluster Trust Bootstrap And Hybrid Identity
 
 Goal: establish authenticated node identity before protected Raft networking.
 
@@ -1661,58 +1710,65 @@ Deliverables:
 - two-phase suite upgrades: node capability advertisement, voter readiness,
   committed minimum-suite transition, credential overlap, rollback window, and
   refusal rules that cannot strand an unready voting quorum;
-- voter capability advertisement also commits supported command/API schema and
-  snapshot format reader/writer ranges plus supported `StorageChargeCapability`
-  modes and charge-formula reader/writer versions;
-- Raft commits one active charge mode, formula version, charge-unit identifier, and
-  rounding contract used by deterministic apply; every reservation persists the
-  formula version that created it until an explicit committed reaccount operation;
-- charge-formula upgrades are two-phase: voters advertise reader/writer readiness,
-  every current voter proves it can read all live reservation formulas and apply the
-  proposed writer, any required reservation increases commit before activation, and
-  only then commits the new active writer; before `0.70.0`, one unready voter blocks
-  activation because no safe membership transition exists;
-- formula transition never silently reduces an existing reservation, and nodes that
-  cannot deterministically read every live reservation formula and apply the active
-  writer formula cannot campaign, become leader, receive leadership transfer, vote,
-  or acknowledge successful state-machine apply;
-- learners may remain during formula transition but cannot be promoted until they can
-  read every live reservation version and the active writer; new-formula commands
-  cannot be appended until all-voter readiness or the `0.70.0` membership transition
-  and subsequent activation are durably committed;
-- formula rollback uses the same readiness and activation protocol and is forbidden
-  while any live reservation requires a reader version absent from the rollback
-  target; snapshots bind the active writer plus every live reader version, and an
-  incompatible node rejects installation before state mutation and remains non-voting.
+- voter capability advertisement commits supported command/API schema and snapshot
+  format reader/writer ranges; incompatible nodes remain non-voting.
 
 Verification:
 
 - downgrade, stripping, impersonation, bootstrap, mixed-version readiness,
   command/snapshot schema mismatch, incompatible voter rejection, stranded-voter
-  prevention, suite rollback, identity rotation, expiry, and load tests;
-- mixed-version charge readers/writers, rolling formula upgrade, quorum-only readiness
-  refusal with one unready voter, leadership transfer to an old binary,
-  unready-candidate election, incompatible apply acknowledgement, deterministic
-  charged-total parity, original-formula reservation retention, rollback refusal,
-  unfamiliar-formula snapshot installation, and upgraded-node rejoin tests.
+  prevention, suite rollback, identity rotation, expiry, and load tests.
 
 Exit criteria:
 
-- No forwarding, network join, or key-package recipient is trusted without hybrid
-  identity; every node remaining a voter reads all live reservation formulas, applies
-  the active writer deterministically, and computes identical charged totals.
-- Focused `0.68.0` cluster trust and identity pentest passes.
+- No forwarding, network join, or key-package recipient is trusted without hybrid identity.
+- Focused `0.71.0` cluster trust and identity pentest passes.
 
-### 0.69.0 - Forwarded Identity And Cache Coherence
+### 0.72.0 - Raft Charge Formula Compatibility
 
-Goal: preserve original client authority across leader forwarding.
+Goal: keep replicated storage accounting deterministic across mixed-version nodes.
+
+Deliverables:
+
+- voter capability advertisement includes supported `StorageChargeCapability` modes
+  and charge-formula reader/writer versions;
+- Raft commits one active charge mode, formula version, charge-unit identifier, and
+  rounding contract used by deterministic apply; every reservation persists the
+  formula version that created it until an explicit committed reaccount operation;
+- charge-formula upgrades are two-phase: every current voter proves it can read all
+  live reservation formulas and apply the proposed writer, required reservation
+  increases commit before activation, and only then commits the new writer; before
+  `0.75.0`, one unready voter blocks activation because no safe membership transition exists;
+- incompatible nodes cannot campaign, become leader, receive leadership transfer,
+  vote, or acknowledge successful state-machine apply;
+- learners may remain but cannot be promoted until fully compatible; new-formula
+  commands wait for all-voter readiness or the `0.75.0` membership transition;
+- rollback uses the same readiness protocol and is forbidden while a live reservation
+  needs a reader absent from the rollback target; snapshots bind active and live
+  formula versions and fail before mutation on incompatible nodes.
+
+Verification:
+
+- mixed-version readers/writers, rolling upgrade, quorum-only readiness refusal,
+  leadership transfer to an old binary, unready election/apply, charged-total parity,
+  original-formula retention, rollback refusal, unfamiliar snapshot, and rejoin tests.
+
+Exit criteria:
+
+- Every remaining voter reads all live reservation formulas, applies the active writer
+  deterministically, and computes identical charged totals.
+- Focused `0.72.0` Raft charge-formula compatibility pentest passes.
+
+### 0.73.0 - Forwarded Identity And Cluster Audit Evidence
+
+Goal: preserve original client authority and audit meaning across leader forwarding.
 
 Deliverables:
 
 - identity-authenticated forwarded client, request, policy, namespace, TLS, and audit context;
 - follower anti-forgery credentials and leader reauthorization rules;
 - stable operation ID from ingress through forwarding, authorization, Raft command,
-  audit outbox, result, and rate accounting;
+  audit outbox, and result;
 - follower ingress/forward evidence separated from leader authorization/effect evidence;
 - audit records bind Raft term/index, command digest, leader identity, and node identity;
 - per-node authenticated chains correlate by operation ID and committed Raft index;
@@ -1720,27 +1776,43 @@ Deliverables:
 - replicated audit-outbox deduplication and leader-change recovery when intent
   commits without a final outcome;
 - follower audit failure blocks forwarding; leader audit failure before commit or
-  release blocks the effect/response under the fail-closed gate;
+  release blocks the effect/response under the fail-closed gate.
+
+Verification:
+
+- forged forwarding, context swap, replay, follower/leader audit failure, outbox
+  duplicate, intent-without-outcome recovery, per-node chain correlation, partition,
+  and leadership-change tests.
+
+Exit criteria:
+
+- Followers cannot forge client identity or bypass leader authorization/audit.
+- Focused `0.73.0` forwarded-identity and cluster-audit pentest passes.
+
+### 0.74.0 - Cluster Accounting And Cache Coherence
+
+Goal: make cluster-wide limits and authorization caches coherent under forwarding.
+
+Deliverables:
+
 - exact-once cluster-authoritative rate/lockout charging for forwarded requests,
   with charge, failed-auth outcome, lockout transition, and replay result in one
-  Raft command keyed by stable accounting ID;
+  Raft command keyed by the stable accounting ID;
 - delegated-budget reconciliation and fail-closed partition behavior;
 - token revocation, policy change, identity merge, and seal-generation cache invalidation.
 
 Verification:
 
-- forged forwarding, multi-node spraying, double/missed charge, delegated overspend,
-  crash before/after accounting commit, lost result replay,
-  follower/leader audit failure, outbox duplicate, intent-without-outcome recovery,
-  per-node chain correlation, stale cache, replay, context swap, partition, and
-  leadership-change tests.
+- multi-node spraying, double/missed charge, delegated overspend, crash before/after
+  accounting commit, lost result replay, stale cache, partition, and leader-change tests.
 
 Exit criteria:
 
-- Followers cannot forge client identity or bypass leader authorization/audit.
-- Focused `0.69.0` forwarding and cache-coherence pentest passes.
+- Forwarding cannot multiply budgets, bypass lockout, or retain authorization after a
+  committed invalidation.
+- Focused `0.74.0` cluster-accounting and cache-coherence pentest passes.
 
-### 0.70.0 - Raft Membership And Recovery
+### 0.75.0 - Raft Membership And Recovery
 
 Goal: make identity-authenticated admission and membership transitions recoverable.
 
@@ -1771,9 +1843,9 @@ Exit criteria:
 - Voting authority changes only through identity-verified committed joint consensus;
   formula activation never leaves an incompatible voter or weakens quorum/failure
   tolerance below policy.
-- Focused `0.70.0` Raft membership pentest passes.
+- Focused `0.75.0` Raft membership pentest passes.
 
-### 0.71.0 - Cluster Key Distribution And Seal Coordination
+### 0.76.0 - Cluster Key Distribution And Seal Coordination
 
 Goal: distribute and revoke keyring access per identity-authenticated node.
 
@@ -1797,9 +1869,9 @@ Exit criteria:
 - Removed nodes cannot participate, receive future epochs, or authorize new work;
   removal fences identity and rotates write keys while prior exposure remains
   documented. Cooperative sealing clears local state but is not claimed for attackers.
-- Focused `0.71.0` cluster key-distribution pentest passes.
+- Focused `0.76.0` cluster key-distribution pentest passes.
 
-### 0.72.0 - Seal Provider Implementations
+### 0.77.0 - Seal Provider Contracts And Implementations
 
 Goal: implement a narrow provider TCB for protecting secret zero before multi-seal.
 
@@ -1808,80 +1880,75 @@ Deliverables:
 - `SealProvider` capability interface for challenge, wrap, unwrap, rotate,
   health, provenance, revoke, and supported-assurance discovery;
 - closed runtime `SealResponseAssurance`: `ClassicalTransport`,
-  `AttestedClassicalRecipient`, `HybridWrappedResponse`, and
-  `LocalNonExportable`; assurance is negotiated/reported, never inferred by name;
-- AWS KMS, Azure Key Vault/Managed HSM, and GCP Cloud KMS implementations;
-- PKCS#11/HSM, TPM, and deterministic local-test providers through the same contract;
-- `SecretSource` credentials only, with ambient cloud credential discovery forbidden;
-- destination-scoped egress broker enforcement and no dynamic-credential-engine reuse;
-- provider identity, account/tenant/project, controlling authority, key provenance,
-  region/failure-domain, and assurance metadata;
-- admission-time discovery of provider API version, algorithms, and maximum
-  plaintext/ciphertext/metadata sizes; the complete selected ML-KEM ciphertext,
-  AEAD metadata, and canonical envelope must fit before a provider is activated;
-- direct Azure/GCP and ordinary AWS KMS are `ClassicalTransport`; AWS Nitro
-  recipient mode is `AttestedClassicalRecipient` and is not labeled PQ-resistant;
-- approved local HSM/TPM non-exportable paths may report `LocalNonExportable` only
-  when plaintext never crosses a recordable classical network boundary;
-- optional PQ seal-provider bridge authenticates over hybrid transport, owns a
-  non-exportable PQ recipient key available independently of the vault barrier,
-  fronts cloud KMS, and returns a bound application-layer
-  `HybridWrappedResponse`;
-- bridge sealing first PQ-KEM/AEAD encrypts each share to the bridge recipient,
-  then cloud-KMS wraps that inner PQ ciphertext; cloud KMS unwrap therefore
-  returns only inner PQ ciphertext and never a raw share over classical transport;
-- before unseal, the vault creates an ephemeral PQ response-recipient key in
-  locked memory; after cloud unwrap the bridge decapsulates the inner ciphertext
-  and rewraps the share directly to that authenticated ephemeral vault recipient;
-- every unseal attempt uses a fresh vault response-recipient key; completion,
-  timeout, or cancellation destroys it, and responses for any prior attempt/key
-  are rejected;
-- the bridge holds a recovered raw share only in a fixed-capacity locked buffer
-  using reviewed `sanitization` facilities, never persists it, and clears it after
-  rewrap or on error, timeout, cancellation, and caught panic/unwind; the isolated
-  bridge worker disables dumps and cannot persist or resume raw-share state;
-- uncatchable abort, `SIGKILL`, host failure, or power loss cannot execute clearing
-  code; assurance then derives from locked non-dump memory, process isolation, no
-  persistent raw-share state, OS memory reclamation, and documented per-platform
-  physical-memory residual risk rather than a synchronous zeroization claim;
-- inner and outer envelopes cryptographically bind vault, node, provider, share
-  index, assurance, seal generation, challenge nonce, expiry, and bridge identity;
-  provider challenge/session authentication binds bridge and vault recipient keys;
-- `HybridWrappedResponse` is forbidden when any recordable classical network
-  segment carries a raw share; unsupported response protection is explicit;
+  `AttestedClassicalRecipient`, `HybridWrappedResponse`, and `LocalNonExportable`;
+  assurance is negotiated/reported, never inferred by name;
+- AWS KMS, Azure Key Vault/Managed HSM, GCP Cloud KMS, PKCS#11/HSM, TPM, and
+  deterministic local-test implementations through one contract;
+- `SecretSource` credentials only, destination-scoped egress, no ambient cloud
+  discovery, and no dynamic-credential-engine reuse;
+- provider identity, controlling authority, provenance, region/failure-domain,
+  assurance, API version, algorithms, and envelope-size capability discovery;
+- direct Azure/GCP and ordinary AWS KMS are `ClassicalTransport`; AWS Nitro recipient
+  mode is `AttestedClassicalRecipient`, not PQ-resistant; approved local HSM/TPM paths
+  report `LocalNonExportable` only when plaintext crosses no recordable network;
 - typed replay, stale generation, timeout, ambiguous result, retry, revoke,
-  throttling, and outage semantics.
+  throttling, and outage semantics; `HybridWrappedResponse` remains unavailable until
+  the separately verified bridge release.
 
 Verification:
 
-- provider-specific conformance for challenge/wrap/unwrap/rotate/health/revoke;
-- provider size-boundary, API-version, algorithm-discovery, canonical-overhead,
-  and unsupported-capability admission tests;
+- provider-specific challenge/wrap/unwrap/rotate/health/revoke conformance;
+- size-boundary, API-version, algorithm-discovery, canonical-overhead, and unsupported
+  admission tests;
 - ambient-credential rejection, egress escape, replay, stale generation, timeout,
-  ambiguous retry, assurance mislabel/downgrade, bridge binding, outage, and provenance;
-- reversed cloud-then-PQ envelope ordering, raw-share cloud response, missing or
-  stale pre-unseal recipient, recipient substitution, cross-provider/share-index
-  substitution, and unlocked-key rejection;
-- bridge restart between cloud unwrap and vault rewrap plus success, error, timeout,
-  cancellation, panic/unwind, abort, and crash residue tests for bridge and vault
-  buffers, dumps, and restart state;
-- abort/crash tests prove no persistent artifact, core dump, restart state, or
-  serialized raw share exists; they do not claim synchronous clearing of
-  inaccessible physical memory after uncatchable termination;
-- capture every provider exchange, then compromise all classical transport and
-  recipient keys; captures contain only PQ ciphertext and protected-quorum secret
-  material remains confidential.
+  ambiguous retry, assurance mislabel/downgrade, outage, and provenance tests.
 
 Exit criteria:
 
-- Every multi-seal participant passes the narrow seal-provider conformance suite,
-  proves its complete envelope fits, exposes no dynamic cloud credential authority,
-  and cannot claim hybrid assurance unless raw shares remain bounded, cleared on
-  every handled path, and absent from every recordable classical segment; residual
-  risk after uncatchable termination is explicit.
-- Focused `0.72.0` seal-provider implementation pentest passes.
+- Every provider proves its envelope fits, exposes no dynamic cloud credential
+  authority, and reports only demonstrated assurance.
+- Focused `0.77.0` seal-provider contract and implementation pentest passes.
 
-### 0.73.0 - Threshold Multi-Seal And Auto-Unseal
+### 0.78.0 - Hybrid Seal Provider Bridge
+
+Goal: add an optional PQ application-layer bridge without exposing raw shares on classical links.
+
+Deliverables:
+
+- bridge authenticates over hybrid transport, owns a barrier-independent
+  non-exportable PQ recipient key, fronts cloud KMS, and returns a bound
+  `HybridWrappedResponse`;
+- sealing PQ-KEM/AEAD encrypts each share to the bridge before cloud-KMS wrapping, so
+  cloud unwrap returns only inner PQ ciphertext;
+- each unseal attempt creates a fresh locked-memory PQ response recipient; the bridge
+  decapsulates and rewraps directly to it, and completion/timeout/cancellation destroys
+  it while stale recipient responses are rejected;
+- recovered raw shares exist only in fixed-capacity locked buffers using reviewed
+  `sanitization`, never persist, and clear on every handled outcome; the isolated
+  bridge worker disables dumps and cannot resume raw-share state;
+- abort, `SIGKILL`, host failure, or power loss cannot promise synchronous clearing;
+  assurance instead relies on locked non-dump memory, isolation, no persistent raw
+  share, OS reclamation, and documented platform residual risk;
+- inner/outer envelopes bind vault, node, provider, share index, assurance, seal
+  generation, challenge, expiry, bridge identity, and recipient keys;
+- `HybridWrappedResponse` is forbidden if a recordable classical segment carries a raw share.
+
+Verification:
+
+- reversed envelope ordering, raw-share cloud response, stale/missing recipient,
+  recipient/provider/share substitution, bridge binding, and unlocked-key tests;
+- restart between unwrap/rewrap plus success, error, timeout, cancellation, panic,
+  abort, crash residue, dump, and restart-state tests;
+- captured exchanges remain PQ ciphertext after compromise of every classical
+  transport and recipient key.
+
+Exit criteria:
+
+- Hybrid assurance is claimed only when raw shares stay bounded, clear on handled
+  paths, never cross recordable classical links, and uncatchable residual risk is explicit.
+- Focused `0.78.0` hybrid seal-provider bridge pentest passes.
+
+### 0.79.0 - Threshold Multi-Seal And Auto-Unseal
 
 Goal: move secret zero behind provider-neutral threshold protection.
 
@@ -1908,9 +1975,9 @@ Verification:
 Exit criteria:
 
 - One provider compromise cannot silently unseal or weaken policy.
-- Focused `0.73.0` auto-unseal and secret-zero pentest passes.
+- Focused `0.79.0` auto-unseal and secret-zero pentest passes.
 
-### 0.74.0 - Rollback Detection And Checkpoints
+### 0.80.0 - Rollback Detection And Checkpoints
 
 Goal: detect valid whole-store rollback where topology permits it.
 
@@ -1933,9 +2000,9 @@ Exit criteria:
 
 - Every deployment declares and tests its rollback-detection assurance, and a
   retained checkpoint can prove inclusion of an identified committed Raft command.
-- Focused `0.74.0` rollback and checkpoint pentest passes.
+- Focused `0.80.0` rollback and checkpoint pentest passes.
 
-### 0.75.0 - Compromise Response And Trust Replacement
+### 0.81.0 - Compromise Response And Trust Replacement
 
 Goal: recover from suspected key or trust-root compromise, not only planned rotation.
 
@@ -1956,519 +2023,389 @@ Verification:
 Exit criteria:
 
 - Compromised authority can be fenced and replaced without ordinary rotation assumptions.
-- Focused `0.75.0` compromise-response pentest passes.
+- Focused `0.81.0` compromise-response pentest passes.
 
-### 0.76.0 - Replication And Multi-Cluster
+### 0.82.0 - Replication Trust And Key Domains
 
-Goal: add cryptographically explicit read scaling, DR, and multi-region replication.
+Goal: establish cryptographically explicit trust and key-sharing boundaries between clusters.
 
 Deliverables:
 
-- independent cluster IDs, trust roots, membership epochs, and hybrid replication
-  identities;
-- two explicit cryptographic modes:
-  - shared-domain DR with a narrowly scoped replication KEK unique to each
-    destination cluster and source replication epoch, documented expanded
-    compromise blast radius, and no exported barrier/root keys;
-  - independent-domain DR with destination-specific DEK rewrapping or brokered
-    decrypt/re-encrypt over hybrid authenticated replication, without exporting
-    source or destination barrier/root keys;
-- replication KEKs are domain-separated from barrier, namespace, mount, backup,
-  and ordinary object KEKs and cannot be reused across purposes or destinations;
-- destination removal revokes its replication KEK, advances the source replication
-  epoch, fences stale destination credentials, and issues fresh destination-scoped
-  material only to remaining authorized replicas;
-- replication KEK rotation reuses the `0.19.0` durable-operation runtime and
-  `0.24.0` epoch model with `Prepared -> WriteEpochActive -> Rewrapping ->
-  AwaitingDestinationAck -> Retired` plus bounded
-  `AwaitingDestinationAck -> ReattestationRequired -> AwaitingDestinationAck`
-  transitions; a non-compromise rotation may enter explicit degraded
-  `RetirementDeferred` from `WriteEpochActive`, `Rewrapping`, or
-  `AwaitingDestinationAck`, recording its exact origin state and durable cursor,
-  while removal can enter terminal `DestinationFenced` from any non-retired state;
-- result-manifest replacement has the source-side sub-state machine
-  `GenerationFenced -> RebuildCapacityReserved -> DestinationRebuilding ->
-  AwaitingDestinationAck`; one expected generation, command ID, and reservation
-  generation own the transition, so concurrent rebuild attempts cannot fork it;
-- activation atomically makes the new epoch write-active and the old epoch
-  decrypt-only through one durable source-side compare-and-set; activation and
-  cancellation race through that same state revision, and `WriteEpochActive` makes
-  terminal cancellation and old-write-epoch reactivation permanently invalid;
-- bounded destination-specific rewrap records independent progress, retry, pause,
-  pre-activation cancellation, failure, and recovery state; a cancellation request
-  after `WriteEpochActive` may pause rewrap but cannot release mandatory retention
-  capacity or restore writes under the old epoch;
-- permanent abandonment after activation enters `RetirementDeferred`: the new epoch
-  remains write-active, the old epoch remains decrypt-only, residual old-epoch risk
-  and blocked retirement are reported as degraded health; compromise-driven rotation
-  forbids this state and remains fail closed until rewrap and retirement complete;
-- for strict proof-retention rotations, mandatory retention capacity covers frozen
-  scope/result manifests, reserved or actual proof-seed material,
-  acceptance/evidence records, and retained checkpoint material; it remains
-  operation-bound from `WriteEpochActive` through `ProofAvailable` and cannot be
-  released by pause or `RetirementDeferred`;
-- immutable operation configuration sets hard per-operation and per-destination
-  limits for retained manifest generations, quarantine bytes, and rebuild attempts;
-  every active or quarantined full manifest counts against the applicable generation
-  and byte limits, while the source always fences an invalid current generation even
-  when the attempt limit prevents another replacement;
-- a separate bounded quarantine/evidence reservation is keyed by operation,
-  destination, manifest generation, and reservation generation; it cannot borrow
-  proof-retention or transient execution capacity, and replacement construction is
-  forbidden until enough count and byte capacity is durably reserved;
-- transient execution capacity covers worker slots, scratch buffers, transport
-  windows, and provider concurrency; it may be released while deferred, but resume
-  requires idempotent operation-bound readmission that cannot duplicate either
-  transient accounting or mandatory retention reservations;
-- deferral from `WriteEpochActive` or `Rewrapping` resumes `Rewrapping` at the durable
-  cursor after transient-capacity readmission; deferral from
-  `AwaitingDestinationAck` first revalidates the unchanged result-manifest generation,
-  certificate, challenge, destination identity, and committed suite, then resumes
-  `AwaitingDestinationAck` or enters `ReattestationRequired` under the existing
-  identity/suite-transition contract; failed manifest validation cannot take either
-  resume edge and follows the generation-rebuild contract below;
-- `WriteEpochActive` durably freezes a canonical source scope manifest, expected
-  cardinality, and scope commitment under the committed hash suite; its header
-  binds snapshot/high-water mark, included backup/snapshot generations, and
-  explicit exclusions/retention policies, while length-prefixed leaves sorted by
-  canonical stable-ID bytes bind stable ID, generation, class, and source epoch;
-- retirement requires authenticated destination acknowledgement of completed
-  rewrap; removal overrides acknowledgement, fences the destination, and retires
-  its access without allowing reconnect to reactivate an old write epoch;
-- canonical signed destination completion certificate binds source/destination
-  cluster IDs, rotation operation ID, fencing and membership epochs, old/new
-  replication-key epochs, immutable inventory snapshot and high-water mark, final
-  cursor, processed/failure counts, capability/schema versions, and completion time;
-- versioned, length-prefixed certificate transcript uses a replication-completion
-  domain label, source-issued challenge nonce, `0.4.0` suite IDs, and the committed
-  cluster minimum suite; dedicated replication-completion credentials are
-  purpose-restricted and distinct from TLS and general node-signing keys;
-- protected profile requires both classical and PQ signatures over the identical
-  canonical transcript under the `0.55.0` dual-signature contract; component
-  stripping, mixed certificates/signatures, cross-protocol reuse, and
-  classical-only fallback are rejected;
-- certificate binds the persisted source scope root/cardinality and a separate
-  destination result root/cardinality under the committed hash suite; result leaves
-  are length-prefixed, sorted by canonical stable-ID bytes, and bind each scoped
-  stable ID and generation to resulting epoch and terminal outcome;
-- pre-implementation commitment specification freezes separate
-  `lykilheim/replication-{scope|result}/{leaf|node|empty}/v1` domain labels, leaf
-  index and canonical entry encoding, ordered pairwise binary Merkle-tree shape,
-  unpaired-node promotion without duplication, empty-root hashing, hash-suite
-  migration, and canonical cross-platform vectors; no tree behavior is implicit;
-- duplicate IDs, non-canonical ordering, scope/result cardinality disagreement, or
-  a result entry absent from the frozen source scope are invalid;
-- closed `ReplicationRewrapOutcome` has retirement-safe
-  `RewrappedToTargetEpoch`, `AlreadyAtTargetEpoch`, and
-  `DeletedWithCommittedTombstone`; `Missing`, `Failed`, `Deferred`, `Quarantined`,
-  `PendingOutbox`, and `OldEpochRetained` are retirement-blocking;
-- exclusions exist only in the source-frozen scope; a destination cannot omit an
-  entry or convert a blocking outcome into an exclusion after activation;
-- destination durably persists and freezes the canonical result manifest before
-  signing its root, retaining it until source acceptance and evidence-retention
-  requirements complete; unavailable or changed post-signing manifests fail closed;
-- when a signed result manifest can no longer be validated, rebuild uses two explicit
-  coordinated durability boundaries rather than claiming a cross-cluster atomic
-  update;
-- first, one source-local compare-and-set advances the expected result-manifest
-  generation, revokes the old challenge and page-authentication context, permanently
-  rejects old-generation certificates, pages, and completion messages, records the
-  rebuild reason, and persists the fresh challenge, expected destination
-  identity/suite, and idempotent destination command ID; this fence is authoritative
-  after source crash or takeover without destination acknowledgement and enters
-  `GenerationFenced` even when no rebuild capacity is available;
-- after fencing, the source either consumes preallocated strict-policy rebuild
-  headroom or reconciles a generation-bound quarantine/evidence reservation through
-  `0.19.0`; success compare-and-sets `GenerationFenced -> RebuildCapacityReserved`,
-  atomically consumes one rebuild attempt, and limit or capacity failure leaves the
-  operation fenced with typed degraded health and cannot restore the old generation,
-  delete evidence, or start rebuild;
-- before destination I/O, the source compare-and-sets
-  `RebuildCapacityReserved -> DestinationRebuilding`; it then issues a
-  hybrid-authenticated rebuild command binding command and operation IDs, frozen
-  source-scope root, old/new manifest and reservation generations, rebuild reason,
-  and the persisted fresh challenge, expected destination identity, and committed
-  suite;
-- the destination rejects absent, stale, undersized, or substituted rebuild
-  reservations, quarantines the old signed manifest as immutable evidence, never
-  mutates or silently reuses it, and idempotently constructs a new immutable manifest
-  and certificate before returning an authenticated acknowledgement bound to the
-  command ID, new generation, result root, reservation generation, and certificate
-  digest;
-- destination rebuild delivery is an `Indeterminate` external effect under `0.19.0`:
-  lost requests or acknowledgements are queried and replayed by command ID, duplicate
-  delivery returns the same result, and takeover reconciles destination state before
-  sending; source safety never depends on an immediate acknowledgement because the
-  old generation was fenced locally before the external effect;
-- source accepts a rebuild acknowledgement only for the exact persisted command and
-  operation IDs, new manifest and reservation generations, destination
-  identity/suite, result root, and certificate digest; it revalidates the immutable
-  manifest and certificate against the frozen source scope, then compare-and-sets the
-  rebuild subphase to `AwaitingDestinationAck`, while duplicate acknowledgement
-  returns that same state and any mismatch leaves the source fence in force;
-- the evidence policy fixed at operation admission defines separate conditions for
-  retaining a full quarantined manifest, reducing it to authenticated
-  certificate/root metadata, and deleting that metadata; strict mode cannot compact
-  before `ProofAvailable`, active legal/incident holds forbid reduction, and every
-  disposition durably records operation/destination/generation, manifest and
-  certificate digests, root/cardinality, rebuild reason, policy revision, and audit
-  evidence before atomically reducing its quarantine reservation;
-- full-manifest compaction is an idempotent copy-on-write lifecycle:
-  `FullRetained -> MetadataPrepared -> DispositionRecorded -> FullRemoved ->
-  ReservationAdjusted`; compaction first reserves worst-case metadata, index, and
-  backend-overhead headroom, authenticated metadata is durable before one local
-  commit records the disposition and audit-outbox intent, the full manifest is
-  removed only afterward, and charged-capacity reduction occurs last from confirmed
-  backend state;
-- metadata deletion has a separate idempotent
-  `MetadataRetained -> DeletionRecorded -> MetadataRemoved -> ReservationReleased`
-  lifecycle; the configured deletion condition and audit-outbox intent commit before
-  removal, the durable disposition tombstone is charged to a bounded operation/audit
-  retention pool before quarantine capacity is reduced or released, and duplicate or
-  replayed compaction/deletion requests return the existing state without repeating
-  effects;
-- crash recovery may temporarily preserve both full and compact representations and
-  over-account their capacity, but compaction can never remove both representations,
-  under-account committed storage, or reduce/release a reservation before its durable
-  evidence disposition exists; audit-outbox failure leaves the earlier representation
-  and reservation intact;
-- all manifest, index, proof, certificate/root metadata, record-framing, encryption,
-  and backend charge calculations use checked arithmetic and the committed `0.5.0`
-  formula version; strict mode admits only `ExactCommitted` or
-  `ConservativeUpperBound`, while `LogicalOnly` and `Unsupported` fail admission; a
-  temporary accounting failure after a write retains the conservative reservation
-  until reconciliation succeeds;
-- quota/reservation accounting uses those charged units, while independent physical
-  free-space and backend-health guards cover WAL/log growth, replicas, temporary
-  writes, MVCC/bloat, and compaction lag; physical pressure may reject new writes,
-  rotations, or rebuilds but never authorizes evidence compaction or deletion;
-- storage pressure, quota exhaustion, or demand from another operation never compacts
-  or deletes quarantined evidence; these conditions apply backpressure and degraded
-  health until the configured evidence condition is met or capacity is expanded;
-- every bounded resumable result page carries a hybrid-authenticated page transcript
-  and Merkle range proof binding operation ID, source scope root, result root,
-  manifest generation, index/range, continuation cursor, and total cardinality;
-- page authenticity comes from the active hybrid replication channel or a
-  domain-separated session MAC derived from its exporter and bound to the operation,
-  manifest generation, and roots; pages are not individually dual-signed, while
-  their Merkle proofs anchor content to the dual-signed certificate result root;
-- source streaming-merge-checks ordered result pages against its frozen scope and
-  incrementally verifies the committed root without loading either full inventory;
-  gaps, overlaps, duplicate entries, cursor rollback, root mismatch, or unsafe
-  outcomes fail closed;
-- certificate scope explicitly accounts for live records, tombstones, quarantined
-  records, pending outboxes, backups, and snapshots; intentionally excluded backup
-  or snapshot generations remain documented old-key exposure with explicit restore
-  and retention policy and cannot support a cryptographic-deletion claim;
-- source accepts a certificate only from the expected current destination identity
-  for the exact operation, challenge, and epochs; it compares the scope root and
-  cardinality with the durably frozen source manifest/checkpoint, then verifies
-  the result root covers that exact scope with only acceptable terminal outcomes
-  before admitting the retirement transition;
-- pre-commit retirement command has a canonical semantic payload binding
-  source/destination cluster IDs, operation/certificate digests, scope/result roots,
-  old/new epochs, expected final operation revision, and command/suite identifiers;
-  its command digest covers that exact payload, while the command neither reserves
-  an index across external signing nor claims commitment;
-- deterministic apply uses actual log term/index to construct and store the canonical
-  acceptance record while the same source Raft command atomically commits `Retired`,
-  invalidates destination-facing old replication-KEK issuance and unwrap/rewrap
-  handles, advances cache/issuance generations, and records the audit outbox effect;
-- acceptance record binds command digest and actual term/index to all retirement
-  semantics and is protected at rest by the barrier; follower apply performs no
-  signing, private-key access, external provider call, or randomness;
-- duplicate acceptance or status retrieval returns the exact retained acceptance
-  record through the hybrid API; this channel-authenticated record is authoritative
-  online but is not by itself an independently verifiable proof of commitment;
-- post-commit offline proof combines the canonical acceptance record, the `0.74.0`
-  signed checkpoint, bounded inclusion proof for its term/index and command digest,
-  committed suite IDs, and historical checkpoint verification material;
-- offline verifier rejects any proposal signature, acceptance record, or log entry
-  lacking valid checkpoint inclusion; proof generation is asynchronous, idempotent,
-  recoverable by a new leader, and never gates or rolls back retirement safety;
-- auxiliary `AcceptanceCommitted -> ProofPending -> ProofAvailable` lifecycle is
-  independent from the terminal `Retired` rotation state and can never revert,
-  suspend, or weaken retirement and key-path fencing;
-- the acceptance command atomically creates a durable idempotent proof job and
-  minimal proof seed containing acceptance record, term/index, command digest,
-  suite/key generations, and inclusion-leaf material retained until a covering
-  checkpoint and proof are durable;
-- proof jobs reuse the `0.19.0` operation runtime with bounded concurrency,
-  idempotency key, retry count/backoff, takeover, and operator-resume semantics;
-- rotation admission reserves one pending-proof slot and worst-case proof-seed bytes
-  until cancellation releases them or acceptance atomically replaces them with the
-  actual seed, preventing in-flight rotations from oversubscribing proof storage;
-- configured pending-proof count/byte hard limits and maximum-age SLO are enforced;
-  admission backpressure rejects new rotations before retained proof material can
-  exhaust storage, while age/availability breaches expose typed degraded health
-  with backlog count, bytes, oldest age, checkpoint lag, and last error;
-- count/byte/age breach strengthens admission backpressure but never evicts any
-  retained proof seed, destination manifest, acceptance record, historical
-  verification material, or incomplete proof and never weakens or reverses
-  `Retired`; ordinary cleanup remains policy-driven, not pressure-driven;
-- closed proof-retention policy distinguishes ordinary online acceptance from
-  strict offline proof: ordinary mode permits destination result-manifest cleanup
-  after authoritative online acceptance and normal evidence retention while source
-  proof seed remains; strict mode refuses cleanup until `ProofAvailable`;
-- strict-policy admission obtains operation-bound mandatory retention reservations
-  for source proof-job/proof-seed count and bytes, each destination's frozen
-  result-manifest count and bytes, and retained checkpoint/inclusion-proof material,
-  plus separate transient execution admission and one closed rebuild-capacity
-  strategy: either reserve the configured worst-case retained generation count and
-  quarantine bytes initially, or require a generation-bound reservation after each
-  source fence and before replacement construction; start fails unless all initial
-  mandatory reservations and execution capacity are confirmed; mandatory strict
-  reservations remain through `ProofAvailable` or terminal pre-activation
-  cancellation, while each quarantine reservation remains until its configured
-  evidence disposition atomically reduces or releases it;
-- every destination returns a canonical hybrid-authenticated reservation assertion
-  binding operation and destination IDs, destination storage/backend identity,
-  `StorageChargeCapability` mode, formula version, charge-unit identifier and rounding
-  rules, reserved amount, reservation generation, and capability/configuration
-  revision; the source retains the exact assertion and digest with operation state;
-- reservation amounts are opaque destination-local capacity assertions: the source
-  verifies identity, revision, mode eligibility, operation binding, and declared
-  capacity class but never adds, orders, or numerically compares charged values from
-  local, PostgreSQL, SurrealDB, Raft, or differently versioned units as if they were
-  interchangeable; multi-destination health is a vector of local assertions, not one
-  synthetic byte total;
-- a destination backend, charge-mode, formula, unit, rounding, or configuration
-  change during an active rotation enters durable `ReaccountingRequired`, pauses
-  further replication writes and rebuild commands, and reconciles a fresh assertion
-  through `0.19.0`; old reservation capacity remains held until reaccounting confirms
-  destination-local non-decreasing obligation coverage, including while
-  `RetirementDeferred`, and a formula transition alone cannot reduce it;
-- a reaccount assertion binds old/new modes, formulas, units, amounts, revisions, and
-  a destination-computed deterministic transition result; the source authenticates
-  that result and operation binding but never derives equivalence or ordering by
-  comparing raw values across formulas or units;
-- resume, takeover, and every pre-write or pre-rebuild check require the exact current
-  reservation assertion and configuration revision; stale-formula acknowledgements,
-  cross-unit substitution, or accounting downgrade fail closed;
-- each participant's mandatory retention reservation has the closed lifecycle
-  `Preparing -> Reserved -> Activated -> AcceptanceCommitted -> ProofPending ->
-  ProofAvailable -> Released`;
-  `Cancelled` is reachable only from `Preparing` or `Reserved` after durable
-  rotation cancellation, and `Activated` means the source has committed
-  `WriteEpochActive` and the participant has observed or reconciled that fact;
-- source activation and cancellation use one durable compare-and-set on the expected
-  pre-activation operation revision; a stale cancellation loses once activation
-  commits, including when its response is lost or a destination has not observed it;
-- mandatory retention reservations in `Activated`, `AcceptanceCommitted`, or
-  `ProofPending` cannot be cancelled or released; proof work and reservation
-  ownership may only pause, resume, or transfer through the `0.19.0` takeover
-  contract;
-- every release is a compare-and-set bound to exact operation ID, participant,
-  reservation generation, and expected current state; stale, replayed,
-  cross-operation, cross-participant, or generation-substituted release fails closed;
-- destination reservations have no disappearance lease or TTL release; a compliant
-  destination retains its manifest reservation through source loss, restart,
-  partition, removal, or operator cancellation after acceptance;
-- partial source/destination/checkpoint reservation acquisition uses `0.19.0`
-  indeterminate-effect reconciliation: persist each acknowledgement, query every
-  participant after ambiguity, and compensate only confirmed reservations whose
-  operation remains pre-acceptance;
-- immediately before committing `WriteEpochActive`, source revalidates every
-  participant reservation, generation, storage identity, charge mode/formula/unit,
-  capability/configuration revision, capacity, and state; after activation, mandatory
-  retention reservations cannot be cancelled or released, and after
-  `AcceptanceCommitted`, source loss, destination removal, or operator action cannot
-  erase strict evidence obligations;
-- strict admission also requires compatible `0.74.0` checkpoint topology, available
-  signer/trust history, capacity for configured rotation rate, and maximum checkpoint
-  latency within pending-proof count/byte/age budgets on both source and destination;
-- after a lost acceptance response, the destination queries operation status by
-  operation/certificate digest; online status remains authoritative while proof is
-  pending, and cleanup follows the declared ordinary or strict retention policy;
-- durable operation state includes challenge, scope root/cardinality, validated
-  pending result root/cardinality when available, expected completion signer/identity
-  and membership/fencing epochs, certificate format, signature/hash suites, and
-  committed minimum suite plus scope/result cursors, next expected index, Merkle
-  frontier, validated counts, and blocking-outcome summary so restart resumes
-  bounded verification without altering acceptance expectations; stale signer/suite
-  certificates remain rejected;
-- after a legitimate identity or minimum-suite transition, the source revalidates
-  the unchanged scope/result under current policy, durably enters
-  `ReattestationRequired`, issues a fresh challenge and expected signer/suite, and
-  accepts a newly signed certificate without repeating rewrap; duplicate
-  re-attestation is idempotent, while removed or fenced destinations are ineligible;
-- destination acknowledgement authenticates its exact completion assertion, while
-  source commitment validation proves scope/accounting rather than physical remote
-  persistence or deletion against a compromised destination; retirement stops
-  future source-side use/distribution, while retained old keys, plaintext, and
-  copied ciphertext remain in the documented destination-compromise blast radius;
-- source-side authorization and namespace/path filtering before replication;
-- destination-side capability, policy, namespace, mount, schema, and algorithm
-  authorization before materialization;
-- standbys/read replicas with consistency tokens and explicit stale-read policy;
-- active/passive fencing epochs, promotion witness/quorum, activation tokens,
-  split-brain refusal, failback, and stale-source rejection;
-- post-promotion write-key re-encryption/rewrap plan and replication identity
-  rotation;
-- stable replicated operation IDs plus source/destination audit evidence bound to
-  source/destination clusters, fencing epoch, and replicated object generation;
-- reconnect replay/rollback protection using signed checkpoints and monotonic
-  replication cursors;
-- dynamic-lease ownership transfer state ensuring one cluster alone can renew,
-  revoke, compensate, or issue against an upstream credential;
-- typed conflict rules for KV versions, policies, identities, tokens, leases,
-  approvals, operation results, and audit outboxes;
-- explicit reject/defer/translate behavior when destination lacks an algorithm,
+- independent cluster IDs, trust roots, membership epochs, and hybrid replication identities;
+- shared-domain DR uses a destination-and-source-epoch scoped replication KEK and
+  documents expanded compromise radius without exporting barrier/root keys;
+- independent-domain DR uses destination-specific DEK rewrap or brokered
+  decrypt/re-encrypt without exporting either cluster's barrier/root keys;
+- replication KEKs are domain-separated from barrier, namespace, mount, backup, and
+  object KEKs and cannot be reused across destinations or purposes;
+- destination removal revokes its KEK, advances the source replication epoch, fences
+  stale credentials, and reissues material only to remaining destinations.
+
+Verification:
+
+- trust bootstrap, shared-domain blast radius, cross-destination KEK substitution,
+  stale-epoch replay, removal revocation, and independent-domain rewrap tests.
+
+Exit criteria:
+
+- Every replication relationship declares its trust roots, cryptographic mode, key
+  sharing, destination scope, and compromise blast radius.
+- Focused `0.82.0` replication trust and key-domain pentest passes.
+
+### 0.83.0 - Replication Authorization And Data Plane
+
+Goal: replicate bounded records only across explicitly authorized cluster capabilities.
+
+Deliverables:
+
+- source-side namespace/path authorization before replication and destination-side
+  capability, policy, namespace, mount, schema, and algorithm authorization before materialization;
+- stable replicated operation IDs and source/destination audit evidence bind cluster
+  identities, fencing epoch, and object generation;
+- hybrid-authenticated bounded transfer with monotonic cursors and signed-checkpoint
+  reconnect replay/rollback protection;
+- explicit reject/defer/translate behavior when a destination lacks an algorithm,
   provider, mount, command, snapshot, plugin, or state-schema capability.
 
 Verification:
 
-- shared-domain blast-radius, cross-destination KEK substitution/reuse, stale-epoch
-  replay, destination-removal revocation, and independent-domain DEK
-  rewrap/re-encrypt tests;
-- crash/restart at every rotation transition, concurrent destinations with
-  independent progress/failure, missing or forged acknowledgement, removal while
-  awaiting acknowledgement, and reconnect-after-retirement tests;
-- partial-inventory completion forgery, stale-certificate replay, cross-destination
-  and cross-operation substitution, retired signer/fencing epoch, and crash after
-  rewrap completion but before certificate acceptance tests;
-- hybrid-component stripping, canonical-encoding ambiguity, general-key or
-  cross-protocol signing, signature mix-and-match, challenge replay, algorithm
-  downgrade, and classical-only fallback tests;
-- duplicate/omitted identifiers, altered generations/outcomes, cardinality/root
-  mismatch, reordered canonical entries, and validly signed incomplete-commitment
-  tests against the source manifest/checkpoint;
-- commitment vectors cover empty, singleton, odd/even leaf counts, leaf/node domain
-  separation, canonical encoding, hash-suite transition, and cross-platform parity;
-- truncated/overlapping/duplicated pages, cursor rollback, invalid range proof,
-  unavailable or mutated post-signing manifest, and restart midway through source
-  streaming verification tests;
-- page outside the hybrid channel, wrong exporter/session MAC, page/certificate-root
-  substitution, and channel rekey/resumption tests; bounded-load instrumentation
-  proves page processing performs no per-page dual classical/PQ signature work;
-- valid root with each blocking outcome, unsafe-outcome relabeling, dynamic
-  exclusion, and omitted/altered tombstone tests;
-- result entries outside the frozen scope, destination-defined scope substitution,
-  and source restart after challenge/scope persistence tests;
-- identity rotation during `AwaitingDestinationAck`, suite upgrade between signing
-  and acceptance, stale signer/suite rejection, duplicate re-attestation, and
-  attempted re-attestation after removal/fencing tests;
-- crash/leader change immediately before and after atomic acceptance, concurrent
-  old-epoch issuance, stale handle/cache use, duplicate acceptance, lost status
-  response, status-query recovery, and premature result-manifest deletion tests;
-- replicated proposal followed by leader loss/log truncation, leaked or forged
-  proposal signature, wrong term/index/digest inclusion, and rejection without a
-  covering committed checkpoint tests;
-- checkpoint/signing-provider delay or outage after retirement, new-leader
-  idempotent proof recovery, restore, historical-key/suite verification, and
-  byte-identical online status retrieval tests;
-- prolonged checkpoint outage, pending-proof disk pressure/exhaustion, repeated
-  rotations, duplicate proof jobs, count/byte/age admission backpressure, degraded
-  health, concurrent reservation race/release, restore with backlog, and eventual
-  checkpoint recovery tests;
-- partial multi-destination acquisition, lost reserve/release response, source crash
-  during acquisition, destination restart, pre-activation generation revalidation,
-  and indeterminate reservation takeover/reconciliation tests;
-- stale or cross-operation release after acceptance, generation/participant
-  substitution, concurrent cancellation versus acceptance, source disappearance,
-  destination removal, and forbidden TTL/lease cleanup tests;
-- cancellation racing the `WriteEpochActive` compare-and-set, lost activation
-  response, crash after source activation before destination observation, stale
-  pre-activation cancellation, post-activation pause, and attempted old-write-epoch
-  reactivation tests;
-- planned `RetirementDeferred` entry, degraded-risk reporting, reservation retention,
-  capacity readmission on resume, and compromise-driven deferred-retirement refusal
-  tests;
-- mandatory-retention versus transient-execution accounting, deferred transient
-  release, resume without double reservation, and durable-cursor continuation tests;
-- deferral after certificate signing, unchanged-manifest resume, stale certificate
-  reuse, result-manifest generation advancement, identity/suite change during
-  deferral, and crash while fencing an old signed generation tests;
-- source crash after fencing before command delivery, lost rebuild command or
-  acknowledgement, destination restart, duplicate rebuild delivery, old-generation
-  page delivery during rebuild, concurrent takeover, cross-generation substitution,
-  attempted quarantined-certificate reuse, forged or mismatched acknowledgement, and
-  duplicate acknowledgement after source transition tests;
-- repeated invalidation up to and beyond manifest-generation and rebuild-attempt
-  limits, quarantine-byte exhaustion, replacement-reservation failure, crash between
-  fencing and reservation, concurrent rebuild reservation/command attempts, stale or
-  undersized reservation substitution, and preallocated-versus-per-rebuild accounting
-  tests;
-- full-manifest compaction and metadata deletion occur only after their configured
-  evidence conditions; proof-pending strict mode, legal/incident hold, storage
-  pressure, and quota exhaustion alone preserve evidence and accounting;
-- crash before/after full-manifest compaction, crash between disposition recording
-  and reservation adjustment, duplicate/replayed compaction and deletion, and
-  audit-outbox failure during each disposition transition tests;
-- checked-arithmetic overflow and backend charged-byte accounting tests cover full
-  manifests, indexes, Merkle proofs, certificate/root metadata, encrypted framing,
-  and versioned backend overhead under `ExactCommitted` and
-  `ConservativeUpperBound`; `LogicalOnly`/`Unsupported` strict refusal and crash tests
-  permit temporary over-accounting but reject lost representations during compaction,
-  under-accounting, or early reservation release;
-- local, PostgreSQL, SurrealDB, and Raft charge-assurance declarations, formula
-  vectors, migration/restore continuity, physical free-space/health guard separation,
-  and physical-pressure-without-evidence-deletion tests;
-- source/destination different-unit assertions, non-comparable multi-destination
-  accounting, formula change during active rewrap and `RetirementDeferred`, durable
-  reaccount pause/resume, stale assertion replay, capability/configuration revision
-  mismatch, cross-unit substitution, and attempted accounting downgrade tests;
-- disposition-tombstone pool exhaustion, failed tombstone charge, crash after
-  tombstone charge before quarantine release, and duplicate/replayed release tests;
-- simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
-  every seed, manifest, acceptance record, historical verification material, and
-  partial proof, keeps `Retired`, and rejects new rotations;
-- ordinary cleanup after online acceptance, strict-policy cleanup refusal before
-  proof, source/destination/checkpoint reservation failure and release, proof-seed
-  retention, strict admission incompatibility, retention-capacity, and
-  checkpoint-latency boundary tests;
-- slow PQ/HSM checkpoint signing does not block unrelated Raft proposals;
-  deterministic follower-apply instrumentation proves acceptance apply invokes no
-  signing, private-key access, provider I/O, entropy, or ambient randomness;
-- late writes around the inventory high-water mark plus omitted failure, tombstone,
-  quarantine, pending-outbox, backup, and snapshot scope tests;
-- compromised-destination tests retain old keys/plaintext/ciphertext and verify
-  source retirement prevents future use or distribution without claiming remote
-  erasure;
 - source-filter and destination-authorization bypass, unsupported capability,
-  cursor replay/rollback, audit correlation, and reconnect tests;
-- lease-owner double-renew/revoke, conflict matrices, lag, partition, witness
-  quorum, split-brain promotion, fencing, identity rotation, failback, and
-  recovery drills.
+  cursor replay/rollback, reconnect, context substitution, and audit-correlation tests.
 
 Exit criteria:
 
-- Replication mode and key-sharing blast radius are explicit; shared-domain keys
-  are destination-and-epoch scoped, no retired epoch can resume writes, and key
-  retirement follows a dual-signed completion certificate whose result commitment
-  is verified through bounded durable pages, exactly covers a source-frozen scope,
-  and contains only retirement-safe outcomes, or follows explicit fencing; acceptance,
-  retirement, old destination-facing key-path invalidation, and its replayable
-  online acceptance record commit atomically while follower apply remains keyless
-  and deterministic; independently verifiable commit proof follows through a signed
-  checkpoint through a bounded auxiliary lifecycle that cannot gate or reverse
-  retirement; declared cleanup policy and proof-backlog admission prevent unbounded
-  retention without claiming remote persistence or erasure;
-  legitimate identity/suite rotation can re-attest but never redefine scope or
-  bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
-  a witnessed and fenced destination can become authoritative, and one cluster owns
-  each dynamic lease.
-- Strict mandatory-retention reservations release only after `ProofAvailable` or
-  terminal pre-activation cancellation; once `WriteEpochActive` commits,
-  cancellation cannot restore the old write epoch or discard that capacity; deferred
-  execution resumes without duplicate accounting, and signed-manifest rebuild first
-  fences the old generation at the source and then reconciles an idempotent
-  destination effect without mutating or reusing quarantined evidence; only an exact
-  validated acknowledgement can exit the rebuild subphase, rebuild count/bytes are
-  hard-bounded, capacity failure remains safely fenced, and evidence is reduced only
-  by its declared policy rather than storage pressure; crash-safe disposition keeps
-  at least one authorized representation and never under-accounts or releases its
-  reservation before durable evidence and audit intent exist; strict accounting uses
-  exact or conservative versioned units independently from physical-health guards,
-  quarantine release first charges its durable tombstone elsewhere, destination
-  assertions remain opaque and non-comparable across units, and formula/configuration
-  change pauses work until a current non-decreasing reservation is reconciled;
-  compromise-driven rotation cannot defer retirement.
-- Focused `0.76.0` replication and DR pentest passes.
+- Replication cannot bypass source authorization or materialize unsupported state at a destination.
+- Focused `0.83.0` replication authorization and data-plane pentest passes.
+
+### 0.84.0 - Replication KEK Rotation Lifecycle
+
+Goal: rotate destination replication authority without reactivating an old write epoch.
+
+Deliverables:
+
+- rotation reuses the `0.20.0` operation runtime and `0.25.0` epoch model with
+  `Prepared -> WriteEpochActive -> Rewrapping -> AwaitingDestinationAck -> Retired`;
+- activation and cancellation race through one durable source CAS; activation makes
+  the new epoch write-active and old epoch decrypt-only, after which terminal
+  cancellation and old-write-epoch reactivation are forbidden;
+- bounded per-destination progress, retry, pause, failure, takeover, and recovery;
+- non-compromise rotation may enter `RetirementDeferred` from any post-activation
+  nonterminal state, retaining its origin and cursor; transient worker/scratch/window
+  capacity may be released and idempotently readmitted on resume;
+- deferred rewrap resumes at its cursor; deferred acknowledgement revalidates the
+  unchanged manifest/certificate/challenge/identity/suite before continuing;
+- compromise-driven rotation forbids deferred retirement and remains fail closed;
+  destination removal may enter `DestinationFenced` from any non-retired state.
+
+Verification:
+
+- crash/restart at every transition, concurrent destination progress, activation/
+  cancellation CAS race, lost activation response, crash before destination
+  observation, post-activation pause, old-epoch reactivation, deferred resume, and
+  compromise-driven refusal tests.
+
+Exit criteria:
+
+- Once `WriteEpochActive` commits, no cancellation, reconnect, or stale handle can
+  restore old-epoch writes; every pause and takeover resumes durably.
+- Focused `0.84.0` replication KEK-rotation pentest passes.
+
+### 0.85.0 - Replication Completion Certificates And Commitments
+
+Goal: prove that a destination completed rewrap for one immutable source scope.
+
+Deliverables:
+
+- `WriteEpochActive` freezes a canonical source scope manifest and cardinality bound
+  to snapshot/high-water mark, backup/snapshot generations, exclusions, retention,
+  stable IDs, generations, classes, and source epoch;
+- canonical destination completion certificate binds clusters, operation, fencing/
+  membership epochs, old/new key epochs, inventory point, cursor, counts,
+  capabilities, schema, time, challenge, and `0.4.0` suite IDs;
+- dedicated completion credentials are separate from TLS/node keys; protected mode
+  requires identical-transcript classical and PQ signatures under `0.57.0` with no
+  stripping, mix-and-match, cross-protocol, or classical-only fallback;
+- certificate binds separate source-scope and destination-result roots/cardinalities;
+  versioned length-prefixed Merkle commitments freeze leaf encoding, index, ordering,
+  tree shape, odd-node promotion, empty root, domain labels, and hash migration;
+- closed outcomes permit only `RewrappedToTargetEpoch`, `AlreadyAtTargetEpoch`, and
+  `DeletedWithCommittedTombstone`; missing, failed, deferred, quarantined,
+  pending-outbox, and old-epoch-retained outcomes block retirement;
+- exclusions exist only in the source-frozen scope; duplicate IDs, non-canonical
+  ordering, cardinality disagreement, out-of-scope results, or destination omissions fail;
+- destination freezes the immutable result manifest before signing; source accepts
+  only the expected current identity, challenge, epochs, scope, and safe outcomes;
+- legitimate identity/suite transition enters `ReattestationRequired`, issues a fresh
+  challenge, and re-signs an unchanged result without repeating rewrap; fenced or
+  removed destinations cannot re-attest.
+
+Verification:
+
+- signature stripping/mixing, challenge replay, signer/fencing/suite transition,
+  stale certificate, canonical ambiguity, cross-operation/destination substitution,
+  omitted/duplicate identifiers, root/cardinality mismatch, unsafe relabeling, and
+  empty/singleton/odd/even cross-platform commitment vectors.
+
+Exit criteria:
+
+- A completion certificate is dual-signed, canonical, bound to exactly one frozen
+  source scope, and contains only retirement-safe outcomes.
+- Focused `0.85.0` completion-certificate and commitment pentest passes.
+
+### 0.86.0 - Bounded Result Manifest Verification
+
+Goal: verify large signed result commitments with bounded memory and authenticated pages.
+
+Deliverables:
+
+- each page binds operation, scope/result roots, manifest generation, range/index,
+  continuation cursor, and total cardinality with a Merkle range proof;
+- page authenticity comes from the active hybrid channel or a domain-separated
+  exporter-derived session MAC; pages are not individually dual-signed because proofs
+  anchor them to the signed result root;
+- source streaming-merge-checks ordered result pages against the frozen scope and
+  incrementally reconstructs the committed root without loading either full manifest;
+- durable operation state retains challenge, roots/cardinalities, expected signer and
+  epochs, certificate/suite versions, cursors, next index, Merkle frontier, counts,
+  and blocking-outcome summary for bounded restart;
+- scope explicitly covers live records, tombstones, quarantine, pending outboxes,
+  backups, and snapshots; exclusions remain documented old-key exposure and cannot
+  support cryptographic-deletion claims.
+
+Verification:
+
+- truncated, overlapping, duplicate, reordered, or out-of-scope pages; cursor
+  rollback; invalid proof/MAC/exporter; root substitution; channel rekey; post-sign
+  mutation; restart midway; late-write/high-water; and omitted record-class tests;
+- instrumentation proves bounded page processing performs no per-page dual-signature work.
+
+Exit criteria:
+
+- Bounded verification exactly covers the frozen scope and cannot accept gaps,
+  overlap, unsafe outcomes, or a mutated signed manifest.
+- Focused `0.86.0` bounded result-manifest pentest passes.
+
+### 0.87.0 - Replication Manifest Generation Rebuild
+
+Goal: replace an invalid signed result generation without a cross-cluster atomicity claim.
+
+Deliverables:
+
+- source sub-state machine is `GenerationFenced -> RebuildCapacityReserved ->
+  DestinationRebuilding -> AwaitingDestinationAck`, owned by one expected generation,
+  command ID, and reservation generation;
+- immutable per-operation/destination limits bound retained generations, quarantine
+  bytes, and rebuild attempts; active and quarantined manifests count against limits;
+- source first CAS-advances the expected generation, revokes challenge/page context,
+  permanently rejects old certificates/pages/completion, records reason, and persists
+  fresh challenge, identity/suite, and idempotent command ID;
+- fencing is authoritative without destination ACK and occurs even when rebuild
+  capacity is unavailable; capacity failure stays fenced/degraded and cannot restore,
+  delete evidence, consume an attempt, or begin rebuild;
+- a generation-bound quarantine reservation is acquired or reconciled through
+  `0.20.0`; only then does source consume an attempt and enter destination rebuild;
+- hybrid rebuild command binds operation/command, frozen scope, old/new manifest and
+  reservation generations, reason, challenge, identity, and suite; destination
+  rejects stale/undersized/substituted reservations, quarantines old immutable
+  evidence, and idempotently returns a new manifest/certificate ACK;
+- lost command/ACK is `Indeterminate` and reconciled by command ID; source accepts only
+  exact generation/identity/root/certificate/reservation bindings and duplicate ACKs
+  return the same state.
+
+Verification:
+
+- crash after fence before reserve/send, lost command/ACK, destination restart,
+  duplicate delivery, old-generation pages, concurrent takeover/rebuild, generation
+  limit, quarantine exhaustion, stale reservation, cross-generation substitution,
+  forged ACK, and quarantined-certificate reuse tests.
+
+Exit criteria:
+
+- Invalid generations are fenced locally before external work; replacement is bounded,
+  idempotent, capacity-backed, and cannot revive quarantined evidence.
+- Focused `0.87.0` manifest-generation rebuild pentest passes.
+
+### 0.88.0 - Replication Evidence Retention And Disposition
+
+Goal: retain and retire quarantined replication evidence without pressure-driven deletion.
+
+Deliverables:
+
+- operation-fixed policy separately governs full-manifest retention, reduction to
+  authenticated certificate/root metadata, and metadata deletion; strict mode waits
+  for `ProofAvailable`, and legal/incident holds block reduction;
+- compaction lifecycle is `FullRetained -> MetadataPrepared -> DispositionRecorded ->
+  FullRemoved -> ReservationAdjusted`; it reserves metadata/index/overhead headroom,
+  durably writes authenticated metadata and audit intent, removes full data afterward,
+  and adjusts capacity last;
+- deletion lifecycle is `MetadataRetained -> DeletionRecorded -> MetadataRemoved ->
+  ReservationReleased`; a bounded operation/audit pool charges the durable disposition
+  tombstone before quarantine capacity can release;
+- duplicate/replayed disposition returns existing state; crash may retain both
+  representations and over-account, but cannot lose both, under-account, or release
+  before durable evidence/audit intent;
+- manifest/index/proof/metadata/framing/encryption charge calculations use checked
+  arithmetic and versioned `0.6.0` formulas; strict mode accepts only
+  `ExactCommitted` or `ConservativeUpperBound`;
+- quota units remain separate from WAL/log, replica, temporary-write, MVCC/bloat, and
+  compaction health; physical pressure may reject work but never authorize deletion.
+
+Verification:
+
+- policy/hold/pressure cleanup refusal, crash before/after compaction, crash between
+  disposition and reservation adjustment, duplicate/replayed compaction/deletion,
+  audit-outbox failure, checked overflow, charged-byte vectors, backend overhead,
+  tombstone-pool exhaustion, and early-release tests.
+
+Exit criteria:
+
+- Evidence disposition is policy-driven, crash-safe, conservatively accounted, and
+  never triggered by storage pressure alone.
+- Focused `0.88.0` replication evidence-retention pentest passes.
+
+### 0.89.0 - Atomic Replication Retirement Acceptance
+
+Goal: atomically retire old destination authority and expose an authoritative online result.
+
+Deliverables:
+
+- canonical pre-commit retirement payload binds clusters, operation/certificate
+  digests, scope/result roots, epochs, expected operation revision, command, and suites;
+- deterministic apply uses actual Raft term/index to atomically commit `Retired`,
+  invalidate old destination issuance/unwrap/rewrap handles, advance cache/issuance
+  generations, store the acceptance record, and record audit outbox intent;
+- acceptance record binds command digest and actual term/index to retirement semantics
+  under the barrier; follower apply uses no signing, private keys, provider I/O,
+  entropy, or ambient randomness;
+- duplicate acceptance/status returns byte-identical retained online state over the
+  hybrid API; lost responses recover by operation/certificate digest;
+- source validation proves scope/accounting, not physical remote persistence or
+  deletion; compromised destinations may retain old keys/plaintext/ciphertext, while
+  source retirement prevents future use or distribution.
+
+Verification:
+
+- crash/leader change before/after commit, concurrent old issuance, stale handle/cache,
+  duplicate acceptance, lost status response, byte-identical recovery, premature
+  manifest deletion, and compromised-destination non-erasure tests.
+
+Exit criteria:
+
+- Retirement, old-path invalidation, audit intent, and its authoritative online
+  acceptance record commit in one deterministic source command.
+- Focused `0.89.0` atomic replication-retirement pentest passes.
+
+### 0.90.0 - Replication Offline Commit Proof And Backlog
+
+Goal: produce independently verifiable retirement proof without gating retirement safety.
+
+Deliverables:
+
+- offline proof combines the acceptance record, `0.80.0` signed checkpoint, bounded
+  term/index/command-digest inclusion proof, suite IDs, and historical verification material;
+- verifier rejects proposal signatures, acceptance records, or log entries lacking
+  committed checkpoint inclusion;
+- auxiliary `AcceptanceCommitted -> ProofPending -> ProofAvailable` never reverts,
+  suspends, or weakens terminal `Retired` state;
+- acceptance atomically creates an idempotent proof job and minimal seed retained
+  until a covering checkpoint and proof are durable; jobs use the `0.20.0` operation
+  runtime with bounded concurrency, retry/backoff, takeover, and resume;
+- admission reserves pending-proof count and worst-case seed bytes; hard count/byte
+  limits and age SLO apply backpressure and typed degraded health without evicting
+  seeds, manifests, acceptance, historical keys, or partial proofs;
+- ordinary policy may clean destination manifests after authoritative online
+  acceptance and evidence retention; strict policy, activated in `0.91.0`, waits for
+  `ProofAvailable`.
+
+Verification:
+
+- proposal/log truncation, forged proof, wrong term/index/digest, checkpoint/signing
+  delay or outage, new-leader recovery, duplicate jobs, restore, historical suite/key,
+  disk pressure, repeated rotations, count/byte/age backpressure, and eventual
+  checkpoint recovery tests.
+
+Exit criteria:
+
+- Online retirement remains authoritative and irreversible while bounded asynchronous
+  checkpoint proof eventually becomes independently verifiable.
+- Focused `0.90.0` offline replication-proof and backlog pentest passes.
+
+### 0.91.0 - Strict Replication Capacity Reservations
+
+Goal: guarantee strict proof retention across source, destinations, and checkpoint workspace.
+
+Deliverables:
+
+- strict admission reserves source proof count/bytes, each destination result manifest,
+  checkpoint/proof material, transient execution, and either worst-case rebuild
+  generations/quarantine bytes or per-rebuild capacity;
+- canonical hybrid reservation assertion binds operation/destination, backend identity,
+  charge mode/formula/unit/rounding, amount, reservation generation, and capability/
+  configuration revision; source stores exact assertion/digest and treats amounts as
+  opaque destination-local values, never a cross-backend synthetic total;
+- backend/formula/unit/config change enters `ReaccountingRequired`, pauses writes and
+  rebuild, holds old capacity, and reconciles a destination-authenticated
+  non-decreasing transition through `0.20.0`; source never orders raw cross-unit values;
+- participant lifecycle is `Preparing -> Reserved -> Activated -> AcceptanceCommitted
+  -> ProofPending -> ProofAvailable -> Released`; cancellation exists only before
+  activation, and activation means source `WriteEpochActive` is committed and observed;
+- activation/cancellation share one source CAS; post-activation reservations cannot
+  cancel/release, have no TTL/disappearance lease, and may only pause/resume/transfer;
+- releases CAS-bind operation, participant, reservation generation, and expected state;
+  partial multi-party acquisition reconciles ambiguity and compensates only confirmed
+  pre-activation reservations;
+- source revalidates reservation identity, generation, charge formula/unit/config,
+  capacity, checkpoint topology, signer history, and latency budgets immediately
+  before activation and every resume/write/rebuild;
+- source loss, partition, destination removal, operator action, or pressure cannot
+  erase post-acceptance evidence obligations.
+
+Verification:
+
+- partial acquisition, lost reserve/release response, crash/takeover, stale/cross-
+  operation release, generation/participant substitution, cancellation/activation
+  race, destination disappearance/removal, forbidden TTL cleanup, strict cleanup
+  refusal, source/destination/checkpoint failure, and latency boundaries;
+- different-unit assertions, non-comparable destinations, formula change during
+  rewrap/deferred state, stale assertion/config revision, cross-unit substitution,
+  downgrade, reaccount pause/resume, and preallocated/per-rebuild accounting tests.
+
+Exit criteria:
+
+- Strict reservations survive from activation through `ProofAvailable`, release only
+  by exact state-bound CAS, and remain valid across backend/formula transitions.
+- Focused `0.91.0` strict replication-capacity pentest passes.
+
+### 0.92.0 - DR Promotion, Conflicts, And Lease Ownership
+
+Goal: complete multi-cluster operation with fenced authority and single-owner upstream leases.
+
+Deliverables:
+
+- standby/read replicas expose consistency tokens and explicit stale-read policy;
+- active/passive fencing epochs, promotion witness/quorum, activation tokens,
+  split-brain refusal, stale-source rejection, failback, and post-promotion write-key/
+  replication-identity rotation;
+- dynamic-lease ownership transfer ensures one cluster alone can renew, revoke,
+  compensate, or issue against an upstream credential;
+- typed conflict rules cover KV, policies, identities, tokens, leases, approvals,
+  operation results, and audit outboxes.
+
+Verification:
+
+- lag, partition, witness quorum, split-brain promotion, stale source, fencing,
+  identity/key rotation, failback, and recovery drills;
+- lease-owner double renew/revoke/issue, takeover ambiguity, and conflict-matrix tests.
+
+Exit criteria:
+
+- Only a witnessed and fenced destination becomes authoritative, and exactly one
+  cluster owns each dynamic lease and upstream side effect.
+- Focused `0.92.0` DR promotion, conflict, and lease-ownership pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
 
-### 0.77.0 - Native Adapter SDK
+### 0.93.0 - Native Adapter SDK
 
 Goal: standardize dynamic credential lifecycle behind least privilege.
 
@@ -2490,9 +2427,9 @@ Exit criteria:
 
 - Native adapters receive no broad authority through supported APIs but remain
   explicitly trusted in-process code; untrusted code cannot load natively.
-- Focused `0.77.0` adapter-SDK pentest passes.
+- Focused `0.93.0` adapter-SDK pentest passes.
 
-### 0.78.0 - PostgreSQL Dynamic Provider
+### 0.94.0 - PostgreSQL Dynamic Provider
 
 Goal: manage PostgreSQL credentials, distinct from PostgreSQL storage.
 
@@ -2508,9 +2445,9 @@ Verification:
 Exit criteria:
 
 - Unresolved revocation is reported with durable evidence.
-- Focused `0.78.0` PostgreSQL provider pentest passes.
+- Focused `0.94.0` PostgreSQL provider pentest passes.
 
-### 0.79.0 - MySQL And MariaDB Dynamic Provider
+### 0.95.0 - MySQL And MariaDB Dynamic Provider
 
 Goal: manage MySQL/MariaDB credentials through provider-specific semantics.
 
@@ -2526,9 +2463,9 @@ Verification:
 Exit criteria:
 
 - MySQL-family behavior is not inferred from PostgreSQL semantics.
-- Focused `0.79.0` MySQL/MariaDB provider pentest passes.
+- Focused `0.95.0` MySQL/MariaDB provider pentest passes.
 
-### 0.80.0 - SurrealDB Dynamic Provider
+### 0.96.0 - SurrealDB Dynamic Provider
 
 Goal: manage SurrealDB credentials separately from authoritative storage.
 
@@ -2544,9 +2481,9 @@ Verification:
 Exit criteria:
 
 - Record-access helpers cannot inherit system-user authority.
-- Focused `0.80.0` SurrealDB provider pentest passes.
+- Focused `0.96.0` SurrealDB provider pentest passes.
 
-### 0.81.0 - MongoDB Dynamic Provider
+### 0.97.0 - MongoDB Dynamic Provider
 
 Goal: manage MongoDB users and role grants.
 
@@ -2562,9 +2499,9 @@ Verification:
 Exit criteria:
 
 - MongoDB role scope cannot exceed configured provider policy.
-- Focused `0.81.0` MongoDB provider pentest passes.
+- Focused `0.97.0` MongoDB provider pentest passes.
 
-### 0.82.0 - Redis And Valkey Dynamic Provider
+### 0.98.0 - Redis And Valkey Dynamic Provider
 
 Goal: manage ACL users where server capabilities permit it.
 
@@ -2580,9 +2517,9 @@ Verification:
 Exit criteria:
 
 - Unsupported dynamic behavior is explicit and never insecurely emulated.
-- Focused `0.82.0` Redis/Valkey provider pentest passes.
+- Focused `0.98.0` Redis/Valkey provider pentest passes.
 
-### 0.83.0 - RabbitMQ Dynamic Provider
+### 0.99.0 - RabbitMQ Dynamic Provider
 
 Goal: manage RabbitMQ users, vhosts, tags, and permissions.
 
@@ -2598,9 +2535,9 @@ Verification:
 Exit criteria:
 
 - RabbitMQ credentials cannot exceed role-scoped vhost permissions.
-- Focused `0.83.0` RabbitMQ provider pentest passes.
+- Focused `0.99.0` RabbitMQ provider pentest passes.
 
-### 0.84.0 - AWS Dynamic Provider
+### 0.100.0 - AWS Dynamic Provider
 
 Goal: manage scoped AWS credentials where APIs permit safe lifecycle.
 
@@ -2616,9 +2553,9 @@ Verification:
 Exit criteria:
 
 - AWS ambiguity never reports revocation without evidence.
-- Focused `0.84.0` AWS provider pentest passes.
+- Focused `0.100.0` AWS provider pentest passes.
 
-### 0.85.0 - Azure Dynamic Provider
+### 0.101.0 - Azure Dynamic Provider
 
 Goal: manage scoped Azure credentials through explicit tenant policy.
 
@@ -2634,9 +2571,9 @@ Verification:
 Exit criteria:
 
 - Azure authority remains bound to configured tenant and subscription.
-- Focused `0.85.0` Azure provider pentest passes.
+- Focused `0.101.0` Azure provider pentest passes.
 
-### 0.86.0 - GCP Dynamic Provider
+### 0.102.0 - GCP Dynamic Provider
 
 Goal: manage scoped GCP credentials through explicit project policy.
 
@@ -2652,9 +2589,9 @@ Verification:
 Exit criteria:
 
 - GCP authority remains bound to configured project and account.
-- Focused `0.86.0` GCP provider pentest passes.
+- Focused `0.102.0` GCP provider pentest passes.
 
-### 0.87.0 - Hetzner Dynamic Provider
+### 0.103.0 - Hetzner Dynamic Provider
 
 Goal: manage Hetzner credentials where provider APIs permit lifecycle control.
 
@@ -2670,9 +2607,9 @@ Verification:
 Exit criteria:
 
 - Unsupported Hetzner lifecycle operations are explicit.
-- Focused `0.87.0` Hetzner provider pentest passes.
+- Focused `0.103.0` Hetzner provider pentest passes.
 
-### 0.88.0 - DigitalOcean Dynamic Provider
+### 0.104.0 - DigitalOcean Dynamic Provider
 
 Goal: manage DigitalOcean credentials where provider APIs permit lifecycle control.
 
@@ -2688,9 +2625,9 @@ Verification:
 Exit criteria:
 
 - Unsupported DigitalOcean lifecycle operations are explicit.
-- Focused `0.88.0` DigitalOcean provider pentest passes.
+- Focused `0.104.0` DigitalOcean provider pentest passes.
 
-### 0.89.0 - Kubernetes Secrets Provider
+### 0.105.0 - Kubernetes Secrets Provider
 
 Goal: manage Kubernetes service-account/token secrets separately from auth.
 
@@ -2706,9 +2643,9 @@ Verification:
 Exit criteria:
 
 - Kubernetes secret issuance cannot inherit authentication reviewer authority.
-- Focused `0.89.0` Kubernetes secrets-provider pentest passes.
+- Focused `0.105.0` Kubernetes secrets-provider pentest passes.
 
-### 0.90.0 - LDAP Secrets Provider
+### 0.106.0 - LDAP Secrets Provider
 
 Goal: manage LDAP credentials separately from LDAP authentication.
 
@@ -2724,9 +2661,9 @@ Verification:
 Exit criteria:
 
 - LDAP management authority cannot be used as login authority.
-- Focused `0.90.0` LDAP secrets-provider pentest passes.
+- Focused `0.106.0` LDAP secrets-provider pentest passes.
 
-### 0.91.0 - Adapter Certification
+### 0.107.0 - Adapter Certification
 
 Goal: make adapter safety evidence machine-readable and non-self-asserted.
 
@@ -2742,11 +2679,11 @@ Verification:
 Exit criteria:
 
 - No adapter is stable without reproducible conformance evidence.
-- Focused `0.91.0` adapter-certification pentest passes.
+- Focused `0.107.0` adapter-certification pentest passes.
 
 ## Phase 9: Process-Isolated Extensions
 
-### 0.92.0 - Component ABI And Signed Manifests
+### 0.108.0 - Component ABI And Signed Manifests
 
 Goal: define a narrow extension contract before third-party execution.
 
@@ -2765,9 +2702,9 @@ Verification:
 Exit criteria:
 
 - Provenance is verified but never represented as proof of safety.
-- Focused `0.92.0` plugin supply-chain pentest passes.
+- Focused `0.108.0` plugin supply-chain pentest passes.
 
-### 0.93.0 - Restricted Worker And Authenticated IPC
+### 0.109.0 - Restricted Worker And Authenticated IPC
 
 Goal: execute Wasmtime outside vault memory through bounded authenticated IPC.
 
@@ -2793,9 +2730,9 @@ Exit criteria:
 
 - High-assurance worker starts only with its promised separate process/OS boundary;
   weaker platforms are labeled and cannot claim equivalent isolation.
-- Focused `0.93.0` independent worker/IPC sandbox pentest passes.
+- Focused `0.109.0` independent worker/IPC sandbox pentest passes.
 
-### 0.94.0 - Plugin Capability And Network Broker
+### 0.110.0 - Plugin Capability And Network Broker
 
 Goal: expose invocation-scoped high-level operations only.
 
@@ -2817,9 +2754,9 @@ Verification:
 Exit criteria:
 
 - Plugins cannot exceed invocation-scoped host capabilities.
-- Focused `0.94.0` plugin-capability pentest passes.
+- Focused `0.110.0` plugin-capability pentest passes.
 
-### 0.95.0 - Controlled Plugin Host Services
+### 0.111.0 - Controlled Plugin Host Services
 
 Goal: provide legitimate time and randomness without ambient access.
 
@@ -2836,9 +2773,9 @@ Verification:
 Exit criteria:
 
 - Plugins cannot emulate or obtain uncontrolled clock, entropy, or secret sources.
-- Focused `0.95.0` plugin-host-service pentest passes.
+- Focused `0.111.0` plugin-host-service pentest passes.
 
-### 0.96.0 - Plugin Lifecycle And Certification
+### 0.112.0 - Plugin Lifecycle And Certification
 
 Goal: make install, operation, upgrade, rollback, and revocation safe.
 
@@ -2865,11 +2802,11 @@ Exit criteria:
 
 - Stable extension status requires sandbox, supply-chain, conformance, and
   crash-safe persistent-state compatibility evidence.
-- Focused `0.96.0` extension-lifecycle pentest passes.
+- Focused `0.112.0` extension-lifecycle pentest passes.
 
 ## Phase 10: Operator Intelligence And Governance
 
-### 0.97.0 - Secret Inventory
+### 0.113.0 - Secret Inventory
 
 Goal: expose actionable metadata without a secret-existence oracle.
 
@@ -2886,9 +2823,9 @@ Verification:
 Exit criteria:
 
 - Inventory reveals no path or relationship beyond caller capability.
-- Focused `0.97.0` inventory-leakage pentest passes.
+- Focused `0.113.0` inventory-leakage pentest passes.
 
-### 0.98.0 - Policy Simulator
+### 0.114.0 - Policy Simulator
 
 Goal: explain revision-pinned policy without mutating state.
 
@@ -2905,9 +2842,9 @@ Verification:
 Exit criteria:
 
 - Simulation cannot mutate state or disclose unauthorized existence.
-- Focused `0.98.0` policy-simulator pentest passes.
+- Focused `0.114.0` policy-simulator pentest passes.
 
-### 0.99.0 - Dangerous-Change Dry Run
+### 0.115.0 - Dangerous-Change Dry Run
 
 Goal: preview blast radius through non-mutating capabilities.
 
@@ -2923,9 +2860,9 @@ Verification:
 Exit criteria:
 
 - Dry run produces no durable or upstream side effect.
-- Focused `0.99.0` dry-run safety pentest passes.
+- Focused `0.115.0` dry-run safety pentest passes.
 
-### 0.100.0 - Local Developer Profile
+### 0.116.0 - Local Developer Profile
 
 Goal: make local use easy without disguising non-production guarantees.
 
@@ -2941,9 +2878,9 @@ Verification:
 Exit criteria:
 
 - Developer mode cannot be silently promoted to production configuration.
-- Focused `0.100.0` developer-profile pentest passes.
+- Focused `0.116.0` developer-profile pentest passes.
 
-### 0.101.0 - Leak Intake And Private Correlation
+### 0.117.0 - Leak Intake And Private Correlation
 
 Goal: turn scanner findings into safe managed-secret response inputs.
 
@@ -2960,9 +2897,9 @@ Verification:
 Exit criteria:
 
 - Correlation is neither an oracle nor leaked-plaintext repository.
-- Focused `0.101.0` leak-correlation pentest passes.
+- Focused `0.117.0` leak-correlation pentest passes.
 
-### 0.102.0 - Rotation Readiness
+### 0.118.0 - Rotation Readiness
 
 Goal: report and execute verifiable rotation readiness.
 
@@ -2978,9 +2915,9 @@ Verification:
 Exit criteria:
 
 - Automation never claims rotation without verification evidence.
-- Focused `0.102.0` rotation-readiness pentest passes.
+- Focused `0.118.0` rotation-readiness pentest passes.
 
-### 0.103.0 - Signed Lifecycle Webhooks
+### 0.119.0 - Signed Lifecycle Webhooks
 
 Goal: export replay-safe lifecycle events through native egress.
 
@@ -2996,9 +2933,9 @@ Verification:
 Exit criteria:
 
 - Webhooks contain no raw secrets and cannot target unauthorized destinations.
-- Focused `0.103.0` lifecycle-webhook pentest passes.
+- Focused `0.119.0` lifecycle-webhook pentest passes.
 
-### 0.104.0 - Human Approval Controls
+### 0.120.0 - Human Approval Controls
 
 Goal: require policy-selected quorum approval for sensitive operations.
 
@@ -3014,9 +2951,9 @@ Verification:
 Exit criteria:
 
 - Approval cannot authorize another operation or survive expiry.
-- Focused `0.104.0` approval-bypass pentest passes.
+- Focused `0.120.0` approval-bypass pentest passes.
 
-### 0.105.0 - Break-Glass And Emergency Journal
+### 0.121.0 - Break-Glass And Emergency Journal
 
 Goal: issue emergency authority only after independent durable evidence.
 
@@ -3033,16 +2970,16 @@ Verification:
 Exit criteria:
 
 - No best-effort audit path can issue break-glass authority.
-- Focused `0.105.0` break-glass and emergency-journal pentest passes.
+- Focused `0.121.0` break-glass and emergency-journal pentest passes.
 
-### 0.106.0 - Tamper-Evident Evidence Bundles
+### 0.122.0 - Tamper-Evident Evidence Bundles
 
 Goal: make security events independently verifiable after incidents.
 
 Deliverables:
 
 - checkpoint, classical/PQ/hash-based sign, export, and bundle the authenticated
-  append-only journal chain introduced in `0.28.0`; do not create a second chain;
+  append-only journal chain introduced in `0.29.0`; do not create a second chain;
 - redacted incident, approval, break-glass, leak, rotation, and policy bundles;
 - cluster evidence merger/verifier correlating follower and leader node chains by
   operation ID, Raft term/index, and command digest, including removed or
@@ -3057,11 +2994,11 @@ Verification:
 Exit criteria:
 
 - Evidence tampering or incomplete history is reported explicitly.
-- Focused `0.106.0` evidence-integrity pentest passes.
+- Focused `0.122.0` evidence-integrity pentest passes.
 
 ## Phase 11: Specialized Services And Integrations
 
-### 0.107.0 - Transform Engine
+### 0.123.0 - Transform Engine
 
 Goal: add format-preserving transform, masking, and tokenization independently.
 
@@ -3077,9 +3014,9 @@ Verification:
 Exit criteria:
 
 - Transform cannot weaken Transit or expose reversible mappings without policy.
-- Focused `0.107.0` Transform pentest and crypto review pass.
+- Focused `0.123.0` Transform pentest and crypto review pass.
 
-### 0.108.0 - KMIP Service
+### 0.124.0 - KMIP Service
 
 Goal: expose a separately authenticated bounded KMIP listener.
 
@@ -3095,9 +3032,9 @@ Verification:
 Exit criteria:
 
 - KMIP cannot bypass normal identity, policy, audit, or key isolation.
-- Focused `0.108.0` KMIP listener pentest passes.
+- Focused `0.124.0` KMIP listener pentest passes.
 
-### 0.109.0 - KMS And TDE Key Management
+### 0.125.0 - KMS And TDE Key Management
 
 Goal: manage provider keys for KMS/TDE use without conflating providers.
 
@@ -3113,9 +3050,9 @@ Verification:
 Exit criteria:
 
 - Provider ambiguity never reports key destruction or rotation without evidence.
-- Focused `0.109.0` KMS/TDE pentest passes.
+- Focused `0.125.0` KMS/TDE pentest passes.
 
-### 0.110.0 - Advanced Policy Language
+### 0.126.0 - Advanced Policy Language
 
 Goal: add deterministic CEL-style governance without ambient inputs.
 
@@ -3131,9 +3068,9 @@ Verification:
 Exit criteria:
 
 - Advanced rules cannot override explicit denies or root restrictions.
-- Focused `0.110.0` advanced-policy pentest passes.
+- Focused `0.126.0` advanced-policy pentest passes.
 
-### 0.111.0 - Configurable Resource Quotas
+### 0.127.0 - Configurable Resource Quotas
 
 Goal: make inherited hard limits safely operator-configurable.
 
@@ -3150,9 +3087,9 @@ Verification:
 Exit criteria:
 
 - Configuration can tighten limits and cannot silently disable safety ceilings.
-- Focused `0.111.0` quota-enforcement pentest passes.
+- Focused `0.127.0` quota-enforcement pentest passes.
 
-### 0.112.0 - Audit And Runtime Operator APIs
+### 0.128.0 - Audit And Runtime Operator APIs
 
 Goal: add bounded audit elision, monitoring, and runtime log control.
 
@@ -3168,9 +3105,9 @@ Verification:
 Exit criteria:
 
 - Runtime observability cannot weaken mandatory audit or expose secrets.
-- Focused `0.112.0` operator-observability pentest passes.
+- Focused `0.128.0` operator-observability pentest passes.
 
-### 0.113.0 - Locked-User And Profiling APIs
+### 0.129.0 - Locked-User And Profiling APIs
 
 Goal: expose lockout repair and protected diagnostics independently.
 
@@ -3186,9 +3123,9 @@ Verification:
 Exit criteria:
 
 - Production profiling remains absent unless explicitly compiled and enabled.
-- Focused `0.113.0` lockout/profiling pentest passes.
+- Focused `0.129.0` lockout/profiling pentest passes.
 
-### 0.114.0 - API Client Libraries
+### 0.130.0 - API Client Libraries
 
 Goal: provide typed clients without embedding ambient authority.
 
@@ -3204,9 +3141,9 @@ Verification:
 Exit criteria:
 
 - Clients preserve server security semantics and never log credentials.
-- Focused `0.114.0` client-library pentest passes.
+- Focused `0.130.0` client-library pentest passes.
 
-### 0.115.0 - Agent, Proxy, And Auto-Auth
+### 0.131.0 - Agent, Proxy, And Auto-Auth
 
 Goal: provide a separate least-authority client helper process.
 
@@ -3222,9 +3159,9 @@ Verification:
 Exit criteria:
 
 - Agent/proxy cannot become an unaudited alternate control plane.
-- Focused `0.115.0` agent/proxy pentest passes.
+- Focused `0.131.0` agent/proxy pentest passes.
 
-### 0.116.0 - Kubernetes Operator And Injection
+### 0.132.0 - Kubernetes Operator And Injection
 
 Goal: integrate Kubernetes operator, CSI, and injection workflows.
 
@@ -3240,9 +3177,9 @@ Verification:
 Exit criteria:
 
 - Kubernetes integration cannot cross namespace or service-account scope.
-- Focused `0.116.0` Kubernetes integration pentest passes.
+- Focused `0.132.0` Kubernetes integration pentest passes.
 
-### 0.117.0 - Secret Synchronization
+### 0.133.0 - Secret Synchronization
 
 Goal: sync explicitly authorized secrets with drift detection.
 
@@ -3258,9 +3195,9 @@ Verification:
 Exit criteria:
 
 - Sync exports only specifically authorized secret versions and destinations.
-- Focused `0.117.0` secret-sync pentest passes.
+- Focused `0.133.0` secret-sync pentest passes.
 
-### 0.118.0 - Terraform Integration
+### 0.134.0 - Terraform Integration
 
 Goal: provide Terraform workflows without placing secrets in state by default.
 
@@ -3276,9 +3213,9 @@ Verification:
 Exit criteria:
 
 - Terraform state and plans do not contain secret payloads by default.
-- Focused `0.118.0` Terraform integration pentest passes.
+- Focused `0.134.0` Terraform integration pentest passes.
 
-### 0.119.0 - GitOps Configuration Reconciliation
+### 0.135.0 - GitOps Configuration Reconciliation
 
 Goal: reconcile non-secret configuration without storing payloads in source.
 
@@ -3294,11 +3231,11 @@ Verification:
 Exit criteria:
 
 - GitOps cannot smuggle secret payloads or bypass approval/policy.
-- Focused `0.119.0` GitOps reconciliation pentest passes.
+- Focused `0.135.0` GitOps reconciliation pentest passes.
 
 ## Phase 12: Isolated Experimental Security
 
-### 0.120.0 - TEE Attestation Preview
+### 0.136.0 - TEE Attestation Preview
 
 Goal: experiment with attestation-bound release behind isolated features.
 
@@ -3314,9 +3251,9 @@ Verification:
 Exit criteria:
 
 - TEE preview is disabled by default and cannot weaken stable key release.
-- Focused `0.120.0` TEE-preview pentest passes.
+- Focused `0.136.0` TEE-preview pentest passes.
 
-### 0.121.0 - Zero-Knowledge Policy Preview
+### 0.137.0 - Zero-Knowledge Policy Preview
 
 Goal: admit bounded proofs only for reviewed hidden policy predicates.
 
@@ -3332,9 +3269,9 @@ Verification:
 Exit criteria:
 
 - ZKP preview cannot grant authority outside its exact admitted predicate.
-- Focused `0.121.0` ZKP-preview pentest passes.
+- Focused `0.137.0` ZKP-preview pentest passes.
 
-### 0.122.0 - eBPF Audit Export Preview
+### 0.138.0 - eBPF Audit Export Preview
 
 Goal: export observability without making eBPF the security gate.
 
@@ -3350,11 +3287,11 @@ Verification:
 Exit criteria:
 
 - eBPF loss or disablement cannot bypass mandatory durable audit.
-- Focused `0.122.0` eBPF-export pentest passes.
+- Focused `0.138.0` eBPF-export pentest passes.
 
 ## Phase 13: Stable Qualification
 
-### 0.123.0 - Portability And Reproducible Artifacts
+### 0.139.0 - Portability And Reproducible Artifacts
 
 Goal: qualify binaries and Wolfi artifacts across supported environments.
 
@@ -3372,9 +3309,9 @@ Verification:
 Exit criteria:
 
 - Artifacts trace to exact source without developer-local state.
-- Focused `0.123.0` supply-chain and portability pentest passes.
+- Focused `0.139.0` supply-chain and portability pentest passes.
 
-### 0.124.0 - API, Documentation, And Parity Closeout
+### 0.140.0 - API, Documentation, And Parity Closeout
 
 Goal: close every planned inventory item before compatibility freeze.
 
@@ -3391,9 +3328,9 @@ Verification:
 Exit criteria:
 
 - No capability is silently missing, implied compatible, or undocumented.
-- Focused `0.124.0` API/parity/documentation pentest passes.
+- Focused `0.140.0` API/parity/documentation pentest passes.
 
-### 0.125.0 - Composed Security Campaign And RC Freeze
+### 0.141.0 - Composed Security Campaign And RC Freeze
 
 Goal: prove composition at scale and freeze stable compatibility.
 
@@ -3413,7 +3350,7 @@ Verification:
 Exit criteria:
 
 - Only release-blocking fixes and documentation corrections may follow.
-- Independent `0.125.0` release-candidate pentest passes for the exact commit.
+- Independent `0.141.0` release-candidate pentest passes for the exact commit.
 
 ## 1.0.0 - First Stable Release
 

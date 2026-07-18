@@ -40,7 +40,7 @@ Lykilheim is licensed under the European Union Public Licence 1.2.
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Version plan | Present | Release ladder from `0.1.0` through `2.0.0`, with STOP gates before every release. |
+| Version plan | Present | Granular release ladder from `0.1.0` through `0.141.0`, followed by `1.0.0`, with STOP gates before every release. |
 | Release notes | Present | One Fluxheim-style release-note file per planned release. |
 | Feature parity audit | Present | Vault/OpenBao coverage tracked as `1.0`, preview, post-1.0, research, or intentionally different. |
 | Security policy | Present | Covers disclosure, dependency policy, crypto posture, and release evidence. |
@@ -66,22 +66,22 @@ Lykilheim is licensed under the European Union Public Licence 1.2.
 | Backup/restore and storage migrations | Planned | `1.0.0` |
 | Standalone binary and rootless Wolfi container | Planned | `1.0.0` |
 
-### Post-1.0 Differentiators
+### Pre-1.0 Differentiators
 
 | Capability | Status | Target |
 | --- | --- | --- |
-| Secret inventory | Planned | `1.1.0` |
-| Policy simulator | Planned | `1.1.0` |
-| Dry-run blast-radius mode | Planned | `1.1.0` |
-| Local-first developer mode | Planned | `1.1.0` |
-| Secret leak intake | Planned | `1.2.0` |
-| Rotation readiness scoring | Planned | `1.2.0` |
-| Lifecycle webhooks | Planned | `1.2.0` |
-| Adapter conformance framework | Planned | `1.3.0` |
-| Human approval workflows | Planned | `1.4.0` |
-| Break-glass mode | Planned | `1.4.0` |
-| Tamper-evident audit bundles | Planned | `1.5.0` |
-| Stable Wasm extension platform | Planned | `2.0.0` |
+| Adapter conformance framework | Planned | `0.107.0` |
+| Stable Wasm extension platform | Planned | `0.108.0`-`0.112.0` |
+| Secret inventory | Planned | `0.113.0` |
+| Policy simulator | Planned | `0.114.0` |
+| Dry-run blast-radius mode | Planned | `0.115.0` |
+| Local-first developer mode | Planned | `0.116.0` |
+| Secret leak intake | Planned | `0.117.0` |
+| Rotation readiness scoring | Planned | `0.118.0` |
+| Lifecycle webhooks | Planned | `0.119.0` |
+| Human approval workflows | Planned | `0.120.0` |
+| Break-glass mode | Planned | `0.121.0` |
+| Tamper-evident audit bundles | Planned | `0.122.0` |
 
 ## Why Lykilheim
 
@@ -137,23 +137,20 @@ Rust crate exists.
 
 ## Planned Release Lines
 
-Lykilheim does not treat every planned idea as part of `1.0.0`.
+Lykilheim uses small pre-1.0 releases so each security boundary can be reviewed,
+documented, and pentested independently.
 
-- `0.1.0` starts the crate, threat model, checks, and documentation index.
-- `0.2.0` builds sealed storage and the cryptographic barrier.
-- `0.3.0` adds API routing, audit, policy skeleton, mounts, wrapping design,
-  and cubbyhole design.
-- `0.4.0` adds tokens, leases, KV v2, identity, and cubbyhole storage.
-- `0.5.0` adds AppRole and userpass baseline authentication.
-- `0.6.0` adds transit and PKI baseline services.
-- `0.7.0` adds rootless Wolfi operations, backup/restore, and metrics.
-- `0.8.0` adds Raft high-availability preview and replication boundaries.
-- `0.9.0` adds plugin and dynamic adapter preview work.
-- `0.10.0` freezes the `1.0.0` compatibility contract.
-- `1.0.0` is the first stable vault foundation.
-- `1.1.0` through `1.5.0` add operator intelligence, leak response, adapter
-  certification, human approval, and tamper-evident operations.
-- `2.0.0` is the planned sandboxed extension-platform major release.
+- `0.1.0` is the released repository foundation.
+- `0.2.0`-`0.18.0` establish architecture, storage, crypto, and provider boundaries.
+- `0.19.0`-`0.66.0` build the barrier, API, audit, policy, identity, auth, and
+  cryptographic engines.
+- `0.67.0`-`0.92.0` add recovery, hardened operations, Raft, seals, and replication.
+- `0.93.0`-`0.112.0` add native adapters and process-isolated extensions.
+- `0.113.0`-`0.138.0` add operator intelligence, specialized integrations,
+  governance, and isolated experimental security.
+- `0.139.0`-`0.141.0` qualify portability, documentation, compatibility, and the
+  release candidate.
+- `1.0.0` is the first stable production release.
 
 See [Version Plan](docs/version-plan.md) for the complete release ladder and
 STOP gates.
