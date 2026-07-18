@@ -1996,13 +1996,22 @@ Deliverables:
   admission backpressure rejects new rotations before retained proof material can
   exhaust storage, while age/availability breaches expose typed degraded health
   with backlog count, bytes, oldest age, checkpoint lag, and last error;
+- count/byte/age breach strengthens admission backpressure but never evicts any
+  retained proof seed, destination manifest, acceptance record, historical
+  verification material, or incomplete proof and never weakens or reverses
+  `Retired`; ordinary cleanup remains policy-driven, not pressure-driven;
 - closed proof-retention policy distinguishes ordinary online acceptance from
   strict offline proof: ordinary mode permits destination result-manifest cleanup
   after authoritative online acceptance and normal evidence retention while source
   proof seed remains; strict mode refuses cleanup until `ProofAvailable`;
-- strict-policy admission requires compatible `0.74.0` checkpoint topology,
-  available signer/trust history, retention capacity for configured rotation rate,
-  and a maximum checkpoint latency within pending-proof count/byte/age budgets;
+- strict-policy admission obtains operation-bound durable reservations for source
+  proof-job/proof-seed count and bytes, each destination's frozen result-manifest
+  count and bytes, and checkpoint/inclusion-proof construction workspace; start
+  fails unless every reservation is confirmed and retained through proof availability
+  or idempotent cancellation;
+- strict admission also requires compatible `0.74.0` checkpoint topology, available
+  signer/trust history, capacity for configured rotation rate, and maximum checkpoint
+  latency within pending-proof count/byte/age budgets on both source and destination;
 - after a lost acceptance response, the destination queries operation status by
   operation/certificate digest; online status remains authoritative while proof is
   pending, and cleanup follows the declared ordinary or strict retention policy;
@@ -2087,9 +2096,13 @@ Verification:
   rotations, duplicate proof jobs, count/byte/age admission backpressure, degraded
   health, concurrent reservation race/release, restore with backlog, and eventual
   checkpoint recovery tests;
+- simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
+  every seed, manifest, acceptance record, historical verification material, and
+  partial proof, keeps `Retired`, and rejects new rotations;
 - ordinary cleanup after online acceptance, strict-policy cleanup refusal before
-  proof, proof-seed retention, strict admission incompatibility, retention-capacity,
-  and checkpoint-latency boundary tests;
+  proof, source/destination/checkpoint reservation failure and release, proof-seed
+  retention, strict admission incompatibility, retention-capacity, and
+  checkpoint-latency boundary tests;
 - slow PQ/HSM checkpoint signing does not block unrelated Raft proposals;
   deterministic follower-apply instrumentation proves acceptance apply invokes no
   signing, private-key access, provider I/O, entropy, or ambient randomness;
