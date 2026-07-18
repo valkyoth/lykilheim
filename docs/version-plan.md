@@ -1829,16 +1829,22 @@ Goal: detect valid whole-store rollback where topology permits it.
 Deliverables:
 
 - hash-chained generations and classical/PQ/hash-based signed checkpoints;
+- canonical checkpoint commitment to Raft term/index and command-digest leaves with
+  bounded inclusion proofs, suite/key generations, and retained historical
+  verification material;
 - Raft quorum, hardware monotonic, and external publication anchors;
 - explicit standalone impossibility statement and recovery flow.
 
 Verification:
 
-- snapshot rollback, checkpoint deletion, equivocation, outage, and verifier tests.
+- snapshot rollback, checkpoint deletion, equivocation, outage, delayed checkpoint,
+  command-inclusion proof, wrong term/index/digest, restore, historical-key, and
+  offline-verifier tests.
 
 Exit criteria:
 
-- Every deployment declares and tests its rollback-detection assurance.
+- Every deployment declares and tests its rollback-detection assurance, and a
+  retained checkpoint can prove inclusion of an identified committed Raft command.
 - Focused `0.74.0` rollback and checkpoint pentest passes.
 
 ### 0.75.0 - Compromise Response And Trust Replacement
@@ -1953,32 +1959,31 @@ Deliverables:
   cardinality with the durably frozen source manifest/checkpoint, then verifies
   the result root covers that exact scope with only acceptable terminal outcomes
   before admitting the retirement transition;
-- source leader serializes append preparation, reserves the proposed term/index and
-  final operation revision, constructs the complete canonical retirement receipt,
-  and dual-signs it before proposing with dedicated purpose-restricted classical/PQ
-  receipt credentials; signing failure prevents proposal;
-- receipt body binds source/destination cluster IDs, operation/certificate digests,
-  old/new epochs, proposed term/index, final operation revision, credential/trust
-  generations, receipt/signature suites, committed minimum suite, and a canonical
-  retirement-command payload digest that excludes the receipt envelope/signatures
-  to avoid self-reference;
-- one source Raft command embeds the complete signed receipt bytes and atomically
-  accepts the certificate digest, commits `Retired`, invalidates destination-facing
-  old replication-KEK issuance and unwrap/rewrap handles, advances cache/issuance
-  generations, records the audit outbox effect, and retains that exact receipt;
-- leader admission and followers deterministically validate receipt purpose,
-  signatures, suites, term/index, revision, and payload digest before storing exact
-  bytes; follower apply never signs, accesses receipt private keys, or obtains
-  randomness, preserving the `0.67.0` deterministic-state-machine contract;
-- a signed proposal that loses leadership or is overwritten before commit is never
-  exposed as an accepted receipt and is truncated normally; a new leader constructs
-  a new receipt for its reserved term/index without reusing old signatures;
-- committed receipt is independently verifiable offline using retained historical
-  receipt public keys/trust evidence; duplicate acceptance or status retrieval
-  returns the exact byte-for-byte receipt;
+- pre-commit retirement command has a canonical semantic payload binding
+  source/destination cluster IDs, operation/certificate digests, scope/result roots,
+  old/new epochs, expected final operation revision, and command/suite identifiers;
+  its command digest covers that exact payload, while the command neither reserves
+  an index across external signing nor claims commitment;
+- deterministic apply uses actual log term/index to construct and store the canonical
+  acceptance record while the same source Raft command atomically commits `Retired`,
+  invalidates destination-facing old replication-KEK issuance and unwrap/rewrap
+  handles, advances cache/issuance generations, and records the audit outbox effect;
+- acceptance record binds command digest and actual term/index to all retirement
+  semantics and is protected at rest by the barrier; follower apply performs no
+  signing, private-key access, external provider call, or randomness;
+- duplicate acceptance or status retrieval returns the exact retained acceptance
+  record through the hybrid API; this channel-authenticated record is authoritative
+  online but is not by itself an independently verifiable proof of commitment;
+- post-commit offline proof combines the canonical acceptance record, the `0.74.0`
+  signed checkpoint, bounded inclusion proof for its term/index and command digest,
+  committed suite IDs, and historical checkpoint verification material;
+- offline verifier rejects any proposal signature, acceptance record, or log entry
+  lacking valid checkpoint inclusion; proof generation is asynchronous, idempotent,
+  recoverable by a new leader, and never gates or rolls back retirement safety;
 - after a lost acceptance response, the destination queries operation status by
-  operation/certificate digest and retains its frozen result manifest until the
-  matching receipt confirms acceptance and evidence-retention policy permits cleanup;
+  operation/certificate digest; online status remains authoritative while proof is
+  pending, and the destination retains its frozen result manifest until the matching
+  committed record and offline proof are available and evidence policy permits cleanup;
 - durable operation state includes challenge, scope root/cardinality, validated
   pending result root/cardinality when available, expected completion signer/identity
   and membership/fencing epochs, certificate format, signature/hash suites, and
@@ -2048,13 +2053,17 @@ Verification:
   and acceptance, stale signer/suite rejection, duplicate re-attestation, and
   attempted re-attestation after removal/fencing tests;
 - crash/leader change immediately before and after atomic acceptance, concurrent
-  old-epoch issuance, stale handle/cache use, duplicate acceptance, lost receipt,
-  status-query recovery, and premature result-manifest deletion tests;
-- leader change between receipt signing/proposal/commit, wrong reserved term/index
-  or revision, overwritten uncommitted receipt, invalid embedded receipt, receipt-key
-  rotation, signing failure, and byte-identical duplicate retrieval tests;
-- deterministic follower-apply instrumentation proves receipt validation/storage
-  invokes no signing, receipt private-key access, entropy, or ambient randomness;
+  old-epoch issuance, stale handle/cache use, duplicate acceptance, lost status
+  response, status-query recovery, and premature result-manifest deletion tests;
+- replicated proposal followed by leader loss/log truncation, leaked or forged
+  proposal signature, wrong term/index/digest inclusion, and rejection without a
+  covering committed checkpoint tests;
+- checkpoint/signing-provider delay or outage after retirement, new-leader
+  idempotent proof recovery, restore, historical-key/suite verification, and
+  byte-identical online status retrieval tests;
+- slow PQ/HSM checkpoint signing does not block unrelated Raft proposals;
+  deterministic follower-apply instrumentation proves acceptance apply invokes no
+  signing, private-key access, provider I/O, entropy, or ambient randomness;
 - late writes around the inventory high-water mark plus omitted failure, tombstone,
   quarantine, pending-outbox, backup, and snapshot scope tests;
 - compromised-destination tests retain old keys/plaintext/ciphertext and verify
@@ -2074,8 +2083,9 @@ Exit criteria:
   is verified through bounded durable pages, exactly covers a source-frozen scope,
   and contains only retirement-safe outcomes, or follows explicit fencing; acceptance,
   retirement, old destination-facing key-path invalidation, and its replayable
-  independently verifiable receipt commit atomically while follower apply remains
-  keyless and deterministic, without claiming remote persistence or erasure;
+  online acceptance record commit atomically while follower apply remains keyless
+  and deterministic; independently verifiable commit proof follows through a signed
+  checkpoint without gating retirement or claiming remote persistence or erasure;
   legitimate identity/suite rotation can re-attest but never redefine scope or
   bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
   a witnessed and fenced destination can become authoritative, and one cluster owns
