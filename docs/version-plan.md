@@ -1953,13 +1953,29 @@ Deliverables:
   cardinality with the durably frozen source manifest/checkpoint, then verifies
   the result root covers that exact scope with only acceptable terminal outcomes
   before admitting the retirement transition;
-- one source Raft command atomically accepts the certificate digest, commits
-  `Retired`, invalidates destination-facing old replication-KEK issuance and
-  unwrap/rewrap handles, advances cache/issuance generations, records the audit
-  outbox effect, and stores the retained idempotent acceptance receipt;
-- canonical authenticated acceptance receipt binds source/destination cluster IDs,
-  operation and certificate digests, old/new epochs, final operation revision and
-  Raft term/index; duplicate acceptance returns the exact retained receipt;
+- source leader serializes append preparation, reserves the proposed term/index and
+  final operation revision, constructs the complete canonical retirement receipt,
+  and dual-signs it before proposing with dedicated purpose-restricted classical/PQ
+  receipt credentials; signing failure prevents proposal;
+- receipt body binds source/destination cluster IDs, operation/certificate digests,
+  old/new epochs, proposed term/index, final operation revision, credential/trust
+  generations, receipt/signature suites, committed minimum suite, and a canonical
+  retirement-command payload digest that excludes the receipt envelope/signatures
+  to avoid self-reference;
+- one source Raft command embeds the complete signed receipt bytes and atomically
+  accepts the certificate digest, commits `Retired`, invalidates destination-facing
+  old replication-KEK issuance and unwrap/rewrap handles, advances cache/issuance
+  generations, records the audit outbox effect, and retains that exact receipt;
+- leader admission and followers deterministically validate receipt purpose,
+  signatures, suites, term/index, revision, and payload digest before storing exact
+  bytes; follower apply never signs, accesses receipt private keys, or obtains
+  randomness, preserving the `0.67.0` deterministic-state-machine contract;
+- a signed proposal that loses leadership or is overwritten before commit is never
+  exposed as an accepted receipt and is truncated normally; a new leader constructs
+  a new receipt for its reserved term/index without reusing old signatures;
+- committed receipt is independently verifiable offline using retained historical
+  receipt public keys/trust evidence; duplicate acceptance or status retrieval
+  returns the exact byte-for-byte receipt;
 - after a lost acceptance response, the destination queries operation status by
   operation/certificate digest and retains its frozen result manifest until the
   matching receipt confirms acceptance and evidence-retention policy permits cleanup;
@@ -2034,6 +2050,11 @@ Verification:
 - crash/leader change immediately before and after atomic acceptance, concurrent
   old-epoch issuance, stale handle/cache use, duplicate acceptance, lost receipt,
   status-query recovery, and premature result-manifest deletion tests;
+- leader change between receipt signing/proposal/commit, wrong reserved term/index
+  or revision, overwritten uncommitted receipt, invalid embedded receipt, receipt-key
+  rotation, signing failure, and byte-identical duplicate retrieval tests;
+- deterministic follower-apply instrumentation proves receipt validation/storage
+  invokes no signing, receipt private-key access, entropy, or ambient randomness;
 - late writes around the inventory high-water mark plus omitted failure, tombstone,
   quarantine, pending-outbox, backup, and snapshot scope tests;
 - compromised-destination tests retain old keys/plaintext/ciphertext and verify
@@ -2053,7 +2074,8 @@ Exit criteria:
   is verified through bounded durable pages, exactly covers a source-frozen scope,
   and contains only retirement-safe outcomes, or follows explicit fencing; acceptance,
   retirement, old destination-facing key-path invalidation, and its replayable
-  receipt commit atomically without claiming remote persistence or erasure;
+  independently verifiable receipt commit atomically while follower apply remains
+  keyless and deterministic, without claiming remote persistence or erasure;
   legitimate identity/suite rotation can re-attest but never redefine scope or
   bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
   a witnessed and fenced destination can become authoritative, and one cluster owns
