@@ -1936,6 +1936,10 @@ Deliverables:
 - every bounded resumable result page carries a hybrid-authenticated page transcript
   and Merkle range proof binding operation ID, source scope root, result root,
   manifest generation, index/range, continuation cursor, and total cardinality;
+- page authenticity comes from the active hybrid replication channel or a
+  domain-separated session MAC derived from its exporter and bound to the operation,
+  manifest generation, and roots; pages are not individually dual-signed, while
+  their Merkle proofs anchor content to the dual-signed certificate result root;
 - source streaming-merge-checks ordered result pages against its frozen scope and
   incrementally verifies the committed root without loading either full inventory;
   gaps, overlaps, duplicate entries, cursor rollback, root mismatch, or unsafe
@@ -1948,7 +1952,17 @@ Deliverables:
   for the exact operation, challenge, and epochs; it compares the scope root and
   cardinality with the durably frozen source manifest/checkpoint, then verifies
   the result root covers that exact scope with only acceptable terminal outcomes
-  before retiring the old epoch;
+  before admitting the retirement transition;
+- one source Raft command atomically accepts the certificate digest, commits
+  `Retired`, invalidates destination-facing old replication-KEK issuance and
+  unwrap/rewrap handles, advances cache/issuance generations, records the audit
+  outbox effect, and stores the retained idempotent acceptance receipt;
+- canonical authenticated acceptance receipt binds source/destination cluster IDs,
+  operation and certificate digests, old/new epochs, final operation revision and
+  Raft term/index; duplicate acceptance returns the exact retained receipt;
+- after a lost acceptance response, the destination queries operation status by
+  operation/certificate digest and retains its frozen result manifest until the
+  matching receipt confirms acceptance and evidence-retention policy permits cleanup;
 - durable operation state includes challenge, scope root/cardinality, validated
   pending result root/cardinality when available, expected completion signer/identity
   and membership/fencing epochs, certificate format, signature/hash suites, and
@@ -2007,6 +2021,9 @@ Verification:
 - truncated/overlapping/duplicated pages, cursor rollback, invalid range proof,
   unavailable or mutated post-signing manifest, and restart midway through source
   streaming verification tests;
+- page outside the hybrid channel, wrong exporter/session MAC, page/certificate-root
+  substitution, and channel rekey/resumption tests; bounded-load instrumentation
+  proves page processing performs no per-page dual classical/PQ signature work;
 - valid root with each blocking outcome, unsafe-outcome relabeling, dynamic
   exclusion, and omitted/altered tombstone tests;
 - result entries outside the frozen scope, destination-defined scope substitution,
@@ -2014,6 +2031,9 @@ Verification:
 - identity rotation during `AwaitingDestinationAck`, suite upgrade between signing
   and acceptance, stale signer/suite rejection, duplicate re-attestation, and
   attempted re-attestation after removal/fencing tests;
+- crash/leader change immediately before and after atomic acceptance, concurrent
+  old-epoch issuance, stale handle/cache use, duplicate acceptance, lost receipt,
+  status-query recovery, and premature result-manifest deletion tests;
 - late writes around the inventory high-water mark plus omitted failure, tombstone,
   quarantine, pending-outbox, backup, and snapshot scope tests;
 - compromised-destination tests retain old keys/plaintext/ciphertext and verify
@@ -2031,11 +2051,13 @@ Exit criteria:
   are destination-and-epoch scoped, no retired epoch can resume writes, and key
   retirement follows a dual-signed completion certificate whose result commitment
   is verified through bounded durable pages, exactly covers a source-frozen scope,
-  and contains only retirement-safe outcomes, or follows explicit fencing, without
-  claiming remote persistence or erasure; legitimate identity/suite rotation can
-  re-attest but never redefine scope or bypass fencing; backup/snapshot exclusions
-  remain visible old-key exposure; only a witnessed and fenced destination can
-  become authoritative, and one cluster owns each dynamic lease.
+  and contains only retirement-safe outcomes, or follows explicit fencing; acceptance,
+  retirement, old destination-facing key-path invalidation, and its replayable
+  receipt commit atomically without claiming remote persistence or erasure;
+  legitimate identity/suite rotation can re-attest but never redefine scope or
+  bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
+  a witnessed and fenced destination can become authoritative, and one cluster owns
+  each dynamic lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
