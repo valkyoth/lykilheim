@@ -1668,26 +1668,39 @@ Deliverables:
   rounding contract used by deterministic apply; every reservation persists the
   formula version that created it until an explicit committed reaccount operation;
 - charge-formula upgrades are two-phase: voters advertise reader/writer readiness,
-  the cluster proves a ready voting quorum, any required reservation increases commit
-  before activation, and only then commits the new active writer;
+  every current voter proves it can read all live reservation formulas and apply the
+  proposed writer, any required reservation increases commit before activation, and
+  only then commits the new active writer; before `0.70.0`, one unready voter blocks
+  activation because no safe membership transition exists;
 - formula transition never silently reduces an existing reservation, and nodes that
   cannot deterministically read every live reservation formula and apply the active
-  writer formula remain learners and cannot vote on affected commands or snapshots.
+  writer formula cannot campaign, become leader, receive leadership transfer, vote,
+  or acknowledge successful state-machine apply;
+- learners may remain during formula transition but cannot be promoted until they can
+  read every live reservation version and the active writer; new-formula commands
+  cannot be appended until all-voter readiness or the `0.70.0` membership transition
+  and subsequent activation are durably committed;
+- formula rollback uses the same readiness and activation protocol and is forbidden
+  while any live reservation requires a reader version absent from the rollback
+  target; snapshots bind the active writer plus every live reader version, and an
+  incompatible node rejects installation before state mutation and remains non-voting.
 
 Verification:
 
 - downgrade, stripping, impersonation, bootstrap, mixed-version readiness,
   command/snapshot schema mismatch, incompatible voter rejection, stranded-voter
   prevention, suite rollback, identity rotation, expiry, and load tests;
-- mixed-version charge readers/writers, rolling formula upgrade, ready-quorum
-  activation, incompatible-voter demotion/rejection, deterministic charged-total
-  parity, original-formula reservation retention, and downgrade/reaccount tests.
+- mixed-version charge readers/writers, rolling formula upgrade, quorum-only readiness
+  refusal with one unready voter, leadership transfer to an old binary,
+  unready-candidate election, incompatible apply acknowledgement, deterministic
+  charged-total parity, original-formula reservation retention, rollback refusal,
+  unfamiliar-formula snapshot installation, and upgraded-node rejoin tests.
 
 Exit criteria:
 
 - No forwarding, network join, or key-package recipient is trusted without hybrid
-  identity, no voter applies a charge formula it cannot deterministically process,
-  and ready mixed-version voters compute identical charged totals.
+  identity; every node remaining a voter reads all live reservation formulas, applies
+  the active writer deterministically, and computes identical charged totals.
 - Focused `0.68.0` cluster trust and identity pentest passes.
 
 ### 0.69.0 - Forwarded Identity And Cache Coherence
@@ -1735,15 +1748,29 @@ Deliverables:
 
 - dual-signed join tokens, learner admission, and joint-consensus promote/remove;
 - cluster, node, both public keys, role, address, nonce, expiry, and epoch binding;
+- after membership transitions are available, a charge-formula activation with an
+  unready voter first demotes or removes that voter through committed joint consensus,
+  then re-runs all-remaining-voter readiness before committing the active writer;
+- capability-driven demotion/removal must preserve quorum and configured failure
+  tolerance in both old and new configurations; an upgrade that would shrink voting
+  membership below policy remains blocked and cannot append new-formula commands;
+- learner promotion and voter rejoin require compatibility with the active writer,
+  every live reservation reader version, and installed snapshot formula metadata;
 - encrypted snapshots, quorum-loss, and disaster-recovery runbooks.
 
 Verification:
 
-- rogue join, replay, identity mismatch, race, quorum loss, snapshot, and model tests.
+- rogue join, replay, identity mismatch, race, quorum loss, snapshot, and model tests;
+- joint-consensus demotion during formula upgrade, one-unready-voter transition,
+  old/new quorum overlap, configured failure-tolerance preservation, unsafe shrink
+  refusal, incompatible learner promotion, upgraded-node rejoin, and formula
+  activation before membership-commit rejection tests.
 
 Exit criteria:
 
-- Voting authority changes only through identity-verified committed joint consensus.
+- Voting authority changes only through identity-verified committed joint consensus;
+  formula activation never leaves an incompatible voter or weakens quorum/failure
+  tolerance below policy.
 - Focused `0.70.0` Raft membership pentest passes.
 
 ### 0.71.0 - Cluster Key Distribution And Seal Coordination
