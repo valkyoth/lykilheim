@@ -1886,11 +1886,18 @@ Deliverables:
   material only to remaining authorized replicas;
 - replication KEK rotation reuses the `0.19.0` durable-operation runtime and
   `0.24.0` epoch model with `Prepared -> WriteEpochActive -> Rewrapping ->
-  AwaitingDestinationAck -> Retired`; removal can enter terminal
-  `DestinationFenced` from any non-retired state;
+  AwaitingDestinationAck -> Retired` plus bounded
+  `AwaitingDestinationAck -> ReattestationRequired -> AwaitingDestinationAck`
+  transitions; removal can enter terminal `DestinationFenced` from any non-retired
+  state;
 - activation atomically makes the new epoch write-active and the old epoch
   decrypt-only; bounded destination-specific rewrap records independent progress,
   retry, pause, cancellation, failure, and recovery state;
+- `WriteEpochActive` durably freezes a canonical source scope manifest, expected
+  cardinality, and scope commitment under the committed hash suite; its header
+  binds snapshot/high-water mark, included backup/snapshot generations, and
+  explicit exclusions/retention policies, while length-prefixed leaves sorted by
+  canonical stable-ID bytes bind stable ID, generation, class, and source epoch;
 - retirement requires authenticated destination acknowledgement of completed
   rewrap; removal overrides acknowledgement, fences the destination, and retires
   its access without allowing reconnect to reactivate an old write epoch;
@@ -1906,19 +1913,31 @@ Deliverables:
   canonical transcript under the `0.55.0` dual-signature contract; component
   stripping, mixed certificates/signatures, cross-protocol reuse, and
   classical-only fallback are rejected;
-- certificate carries cardinality and a commitment under the committed hash suite
-  over length-prefixed entries sorted by canonical stable-ID bytes; every entry
-  binds stable ID, generation, class/disposition, source epoch, resulting epoch,
-  and terminal outcome, while duplicate IDs or non-canonical ordering are invalid;
+- certificate binds the persisted source scope root/cardinality and a separate
+  destination result root/cardinality under the committed hash suite; result leaves
+  are length-prefixed, sorted by canonical stable-ID bytes, and bind each scoped
+  stable ID and generation to resulting epoch and terminal outcome;
+- duplicate IDs, non-canonical ordering, scope/result cardinality disagreement, or
+  a result entry absent from the frozen source scope are invalid;
 - certificate scope explicitly accounts for live records, tombstones, quarantined
   records, pending outboxes, backups, and snapshots; intentionally excluded backup
   or snapshot generations remain documented old-key exposure with explicit restore
   and retention policy and cannot support a cryptographic-deletion claim;
 - source accepts a certificate only from the expected current destination identity
-  for the exact operation, challenge, and epochs; it compares commitment and
-  cardinality with the source replication manifest or signed checkpoint and retires
-  the old epoch only when every in-scope record has a valid terminal outcome with
-  no unresolved failure;
+  for the exact operation, challenge, and epochs; it compares the scope root and
+  cardinality with the durably frozen source manifest/checkpoint, then verifies
+  the result root covers that exact scope with only acceptable terminal outcomes
+  before retiring the old epoch;
+- durable operation state includes challenge, scope root/cardinality, validated
+  pending result root/cardinality when available, expected completion signer/identity
+  and membership/fencing epochs, certificate format, signature/hash suites, and
+  committed minimum suite so restart cannot alter acceptance expectations and stale
+  signer/suite certificates remain rejected;
+- after a legitimate identity or minimum-suite transition, the source revalidates
+  the unchanged scope/result under current policy, durably enters
+  `ReattestationRequired`, issues a fresh challenge and expected signer/suite, and
+  accepts a newly signed certificate without repeating rewrap; duplicate
+  re-attestation is idempotent, while removed or fenced destinations are ineligible;
 - destination acknowledgement authenticates its exact completion assertion, while
   source commitment validation proves scope/accounting rather than physical remote
   persistence or deletion against a compromised destination; retirement stops
@@ -1960,6 +1979,11 @@ Verification:
 - duplicate/omitted identifiers, altered generations/outcomes, cardinality/root
   mismatch, reordered canonical entries, and validly signed incomplete-commitment
   tests against the source manifest/checkpoint;
+- result entries outside the frozen scope, destination-defined scope substitution,
+  and source restart after challenge/scope persistence tests;
+- identity rotation during `AwaitingDestinationAck`, suite upgrade between signing
+  and acceptance, stale signer/suite rejection, duplicate re-attestation, and
+  attempted re-attestation after removal/fencing tests;
 - late writes around the inventory high-water mark plus omitted failure, tombstone,
   quarantine, pending-outbox, backup, and snapshot scope tests;
 - compromised-destination tests retain old keys/plaintext/ciphertext and verify
@@ -1975,11 +1999,12 @@ Exit criteria:
 
 - Replication mode and key-sharing blast radius are explicit; shared-domain keys
   are destination-and-epoch scoped, no retired epoch can resume writes, and key
-  retirement follows a dual-signed, source-validated, failure-free completion
-  certificate or explicit fencing without claiming remote persistence or erasure;
-  backup/snapshot exclusions remain visible old-key exposure; only a witnessed and
-  fenced destination can become authoritative, and one cluster owns each dynamic
-  lease.
+  retirement follows a dual-signed completion certificate whose result commitment
+  exactly covers a durable source-frozen scope, or explicit fencing, without
+  claiming remote persistence or erasure; legitimate identity/suite rotation can
+  re-attest but never redefine scope or bypass fencing; backup/snapshot exclusions
+  remain visible old-key exposure; only a witnessed and fenced destination can
+  become authoritative, and one cluster owns each dynamic lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
