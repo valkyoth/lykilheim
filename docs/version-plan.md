@@ -1725,10 +1725,20 @@ Deliverables:
 - approved local HSM/TPM non-exportable paths may report `LocalNonExportable` only
   when plaintext never crosses a recordable classical network boundary;
 - optional PQ seal-provider bridge authenticates over hybrid transport, owns a
-  non-exportable PQ recipient key, fronts cloud KMS, and returns a bound
-  application-layer `HybridWrappedResponse`;
-- every wrapped response binds vault, node, provider, assurance, seal generation,
-  challenge nonce, and expiry; unsupported response protection is explicit;
+  non-exportable PQ recipient key available independently of the vault barrier,
+  fronts cloud KMS, and returns a bound application-layer
+  `HybridWrappedResponse`;
+- bridge sealing first PQ-KEM/AEAD encrypts each share to the bridge recipient,
+  then cloud-KMS wraps that inner PQ ciphertext; cloud KMS unwrap therefore
+  returns only inner PQ ciphertext and never a raw share over classical transport;
+- before unseal, the vault creates an ephemeral PQ response-recipient key in
+  locked memory; after cloud unwrap the bridge decapsulates the inner ciphertext
+  and rewraps the share directly to that authenticated ephemeral vault recipient;
+- inner and outer envelopes cryptographically bind vault, node, provider, share
+  index, assurance, seal generation, challenge nonce, expiry, and bridge identity;
+  provider challenge/session authentication binds bridge and vault recipient keys;
+- `HybridWrappedResponse` is forbidden when any recordable classical network
+  segment carries a raw share; unsupported response protection is explicit;
 - typed replay, stale generation, timeout, ambiguous result, retry, revoke,
   throttling, and outage semantics.
 
@@ -1737,13 +1747,17 @@ Verification:
 - provider-specific conformance for challenge/wrap/unwrap/rotate/health/revoke;
 - ambient-credential rejection, egress escape, replay, stale generation, timeout,
   ambiguous retry, assurance mislabel/downgrade, bridge binding, outage, and provenance;
+- reversed cloud-then-PQ envelope ordering, raw-share cloud response, missing or
+  stale pre-unseal recipient, recipient substitution, and unlocked-key rejection;
 - capture every provider exchange, then compromise all classical transport and
-  recipient keys; protected-quorum secret material remains confidential.
+  recipient keys; captures contain only PQ ciphertext and protected-quorum secret
+  material remains confidential.
 
 Exit criteria:
 
-- Every multi-seal participant passes the narrow seal-provider conformance suite
-  and exposes no dynamic cloud credential authority.
+- Every multi-seal participant passes the narrow seal-provider conformance suite,
+  exposes no dynamic cloud credential authority, and cannot claim hybrid assurance
+  unless raw shares remain absent from every recordable classical segment.
 - Focused `0.72.0` seal-provider implementation pentest passes.
 
 ### 0.73.0 - Threshold Multi-Seal And Auto-Unseal
@@ -1826,11 +1840,17 @@ Deliverables:
 - independent cluster IDs, trust roots, membership epochs, and hybrid replication
   identities;
 - two explicit cryptographic modes:
-  - shared-domain DR with narrowly scoped replication KEK material and documented
-    expanded compromise blast radius, never exported barrier/root keys;
+  - shared-domain DR with a narrowly scoped replication KEK unique to each
+    destination cluster and source replication epoch, documented expanded
+    compromise blast radius, and no exported barrier/root keys;
   - independent-domain DR with destination-specific DEK rewrapping or brokered
     decrypt/re-encrypt over hybrid authenticated replication, without exporting
     source or destination barrier/root keys;
+- replication KEKs are domain-separated from barrier, namespace, mount, backup,
+  and ordinary object KEKs and cannot be reused across purposes or destinations;
+- destination removal revokes its replication KEK, advances the source replication
+  epoch, fences stale destination credentials, and issues fresh destination-scoped
+  material only to remaining authorized replicas;
 - source-side authorization and namespace/path filtering before replication;
 - destination-side capability, policy, namespace, mount, schema, and algorithm
   authorization before materialization;
@@ -1852,7 +1872,9 @@ Deliverables:
 
 Verification:
 
-- shared-domain blast-radius and independent-domain DEK rewrap/re-encrypt tests;
+- shared-domain blast-radius, cross-destination KEK substitution/reuse, stale-epoch
+  replay, destination-removal revocation, and independent-domain DEK
+  rewrap/re-encrypt tests;
 - source-filter and destination-authorization bypass, unsupported capability,
   cursor replay/rollback, audit correlation, and reconnect tests;
 - lease-owner double-renew/revoke, conflict matrices, lag, partition, witness
@@ -1861,7 +1883,8 @@ Verification:
 
 Exit criteria:
 
-- Replication mode and key-sharing blast radius are explicit; only a witnessed,
+- Replication mode and key-sharing blast radius are explicit; shared-domain keys
+  are destination-and-epoch scoped and revoked on removal, only a witnessed and
   fenced destination can become authoritative, and one cluster owns each dynamic
   lease.
 - Focused `0.76.0` replication and DR pentest passes.
