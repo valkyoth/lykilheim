@@ -1898,17 +1898,32 @@ Deliverables:
   cluster IDs, rotation operation ID, fencing and membership epochs, old/new
   replication-key epochs, immutable inventory snapshot and high-water mark, final
   cursor, processed/failure counts, capability/schema versions, and completion time;
+- versioned, length-prefixed certificate transcript uses a replication-completion
+  domain label, source-issued challenge nonce, `0.4.0` suite IDs, and the committed
+  cluster minimum suite; dedicated replication-completion credentials are
+  purpose-restricted and distinct from TLS and general node-signing keys;
+- protected profile requires both classical and PQ signatures over the identical
+  canonical transcript under the `0.55.0` dual-signature contract; component
+  stripping, mixed certificates/signatures, cross-protocol reuse, and
+  classical-only fallback are rejected;
+- certificate carries cardinality and a commitment under the committed hash suite
+  over length-prefixed entries sorted by canonical stable-ID bytes; every entry
+  binds stable ID, generation, class/disposition, source epoch, resulting epoch,
+  and terminal outcome, while duplicate IDs or non-canonical ordering are invalid;
 - certificate scope explicitly accounts for live records, tombstones, quarantined
   records, pending outboxes, backups, and snapshots; intentionally excluded backup
   or snapshot generations remain documented old-key exposure with explicit restore
   and retention policy and cannot support a cryptographic-deletion claim;
 - source accepts a certificate only from the expected current destination identity
-  for the exact operation and epochs, and retires the old epoch only when every
-  in-scope record is accounted for with no unresolved failure;
-- destination acknowledgement proves completed rewrap and readiness under the new
-  epoch, not deletion of previously received key material; retirement stops future
-  source-side use and distribution, while retained old keys, plaintext, and copied
-  ciphertext remain in the documented destination-compromise blast radius;
+  for the exact operation, challenge, and epochs; it compares commitment and
+  cardinality with the source replication manifest or signed checkpoint and retires
+  the old epoch only when every in-scope record has a valid terminal outcome with
+  no unresolved failure;
+- destination acknowledgement authenticates its exact completion assertion, while
+  source commitment validation proves scope/accounting rather than physical remote
+  persistence or deletion against a compromised destination; retirement stops
+  future source-side use/distribution, while retained old keys, plaintext, and
+  copied ciphertext remain in the documented destination-compromise blast radius;
 - source-side authorization and namespace/path filtering before replication;
 - destination-side capability, policy, namespace, mount, schema, and algorithm
   authorization before materialization;
@@ -1939,6 +1954,12 @@ Verification:
 - partial-inventory completion forgery, stale-certificate replay, cross-destination
   and cross-operation substitution, retired signer/fencing epoch, and crash after
   rewrap completion but before certificate acceptance tests;
+- hybrid-component stripping, canonical-encoding ambiguity, general-key or
+  cross-protocol signing, signature mix-and-match, challenge replay, algorithm
+  downgrade, and classical-only fallback tests;
+- duplicate/omitted identifiers, altered generations/outcomes, cardinality/root
+  mismatch, reordered canonical entries, and validly signed incomplete-commitment
+  tests against the source manifest/checkpoint;
 - late writes around the inventory high-water mark plus omitted failure, tombstone,
   quarantine, pending-outbox, backup, and snapshot scope tests;
 - compromised-destination tests retain old keys/plaintext/ciphertext and verify
@@ -1954,10 +1975,11 @@ Exit criteria:
 
 - Replication mode and key-sharing blast radius are explicit; shared-domain keys
   are destination-and-epoch scoped, no retired epoch can resume writes, and key
-  retirement follows an exact, failure-free completion certificate or explicit
-  fencing without claiming remote erasure; backup/snapshot exclusions remain
-  visible old-key exposure; only a witnessed and fenced destination can become
-  authoritative, and one cluster owns each dynamic lease.
+  retirement follows a dual-signed, source-validated, failure-free completion
+  certificate or explicit fencing without claiming remote persistence or erasure;
+  backup/snapshot exclusions remain visible old-key exposure; only a witnessed and
+  fenced destination can become authoritative, and one cluster owns each dynamic
+  lease.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
