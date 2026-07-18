@@ -1917,8 +1917,29 @@ Deliverables:
   destination result root/cardinality under the committed hash suite; result leaves
   are length-prefixed, sorted by canonical stable-ID bytes, and bind each scoped
   stable ID and generation to resulting epoch and terminal outcome;
+- pre-implementation commitment specification freezes separate
+  `lykilheim/replication-{scope|result}/{leaf|node|empty}/v1` domain labels, leaf
+  index and canonical entry encoding, ordered pairwise binary Merkle-tree shape,
+  unpaired-node promotion without duplication, empty-root hashing, hash-suite
+  migration, and canonical cross-platform vectors; no tree behavior is implicit;
 - duplicate IDs, non-canonical ordering, scope/result cardinality disagreement, or
   a result entry absent from the frozen source scope are invalid;
+- closed `ReplicationRewrapOutcome` has retirement-safe
+  `RewrappedToTargetEpoch`, `AlreadyAtTargetEpoch`, and
+  `DeletedWithCommittedTombstone`; `Missing`, `Failed`, `Deferred`, `Quarantined`,
+  `PendingOutbox`, and `OldEpochRetained` are retirement-blocking;
+- exclusions exist only in the source-frozen scope; a destination cannot omit an
+  entry or convert a blocking outcome into an exclusion after activation;
+- destination durably persists and freezes the canonical result manifest before
+  signing its root, retaining it until source acceptance and evidence-retention
+  requirements complete; unavailable or changed post-signing manifests fail closed;
+- every bounded resumable result page carries a hybrid-authenticated page transcript
+  and Merkle range proof binding operation ID, source scope root, result root,
+  manifest generation, index/range, continuation cursor, and total cardinality;
+- source streaming-merge-checks ordered result pages against its frozen scope and
+  incrementally verifies the committed root without loading either full inventory;
+  gaps, overlaps, duplicate entries, cursor rollback, root mismatch, or unsafe
+  outcomes fail closed;
 - certificate scope explicitly accounts for live records, tombstones, quarantined
   records, pending outboxes, backups, and snapshots; intentionally excluded backup
   or snapshot generations remain documented old-key exposure with explicit restore
@@ -1931,8 +1952,10 @@ Deliverables:
 - durable operation state includes challenge, scope root/cardinality, validated
   pending result root/cardinality when available, expected completion signer/identity
   and membership/fencing epochs, certificate format, signature/hash suites, and
-  committed minimum suite so restart cannot alter acceptance expectations and stale
-  signer/suite certificates remain rejected;
+  committed minimum suite plus scope/result cursors, next expected index, Merkle
+  frontier, validated counts, and blocking-outcome summary so restart resumes
+  bounded verification without altering acceptance expectations; stale signer/suite
+  certificates remain rejected;
 - after a legitimate identity or minimum-suite transition, the source revalidates
   the unchanged scope/result under current policy, durably enters
   `ReattestationRequired`, issues a fresh challenge and expected signer/suite, and
@@ -1979,6 +2002,13 @@ Verification:
 - duplicate/omitted identifiers, altered generations/outcomes, cardinality/root
   mismatch, reordered canonical entries, and validly signed incomplete-commitment
   tests against the source manifest/checkpoint;
+- commitment vectors cover empty, singleton, odd/even leaf counts, leaf/node domain
+  separation, canonical encoding, hash-suite transition, and cross-platform parity;
+- truncated/overlapping/duplicated pages, cursor rollback, invalid range proof,
+  unavailable or mutated post-signing manifest, and restart midway through source
+  streaming verification tests;
+- valid root with each blocking outcome, unsafe-outcome relabeling, dynamic
+  exclusion, and omitted/altered tombstone tests;
 - result entries outside the frozen scope, destination-defined scope substitution,
   and source restart after challenge/scope persistence tests;
 - identity rotation during `AwaitingDestinationAck`, suite upgrade between signing
@@ -2000,7 +2030,8 @@ Exit criteria:
 - Replication mode and key-sharing blast radius are explicit; shared-domain keys
   are destination-and-epoch scoped, no retired epoch can resume writes, and key
   retirement follows a dual-signed completion certificate whose result commitment
-  exactly covers a durable source-frozen scope, or explicit fencing, without
+  is verified through bounded durable pages, exactly covers a source-frozen scope,
+  and contains only retirement-safe outcomes, or follows explicit fencing, without
   claiming remote persistence or erasure; legitimate identity/suite rotation can
   re-attest but never redefine scope or bypass fencing; backup/snapshot exclusions
   remain visible old-key exposure; only a witnessed and fenced destination can
