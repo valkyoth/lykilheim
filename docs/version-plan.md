@@ -218,20 +218,42 @@ Deliverables:
 - snapshot-consistent pagination and caller-provided or streaming read buffers;
 - typed conflict, unavailable, corrupt, unsupported, and indeterminate errors;
 - backend capability declarations and hard key/value/batch limits;
+- closed `StorageChargeCapability` with provider-neutral modes:
+  - `ExactCommitted` returns attributable durable allocation units;
+  - `ConservativeUpperBound` uses a documented versioned upper bound covering record
+    framing, indexes, allocation granularity, and worst-case write overhead;
+  - `LogicalOnly` supports ordinary quota accounting but is ineligible for strict
+    evidence-capacity assurance;
+  - `Unsupported` provides no reservation assurance and rejects strict admission;
+- charge unit, formula/version, rounding, and checked-arithmetic rules are
+  deterministic and included in backend capability declarations and conformance
+  vectors;
+- reservation/quota charging is separate from physical free-space and backend-health
+  guards for WAL/log growth, replicas, temporary writes, compaction lag, and
+  unattributable overhead; physical guards may reject writes but grant no cleanup or
+  evidence-deletion authority;
 - typed `RequiredStorageCapabilities` covering linearizable CAS, atomic batch,
   durable acknowledgment, snapshot reads, transactional audit outbox, migration
-  locking, and deterministic iteration;
+  locking, deterministic iteration, accepted charge modes, and compatible charge
+  formula versions;
 - startup and mount admission intersect requirements with backend capabilities;
-  unsupported compositions fail before routes are reachable and are never emulated.
+  unsupported compositions fail before routes are reachable and are never emulated;
+- migration, restore, or backend-version transition persists and verifies charge mode,
+  formula version, and units; it reaccounts or increases reservations before enabling
+  writes and cannot silently downgrade assurance or reduce an existing reservation.
 
 Verification:
 
 - conformance model, admission matrix, linearizable CAS, partial, duplicate,
-  delayed commit, and forbidden weak-emulation tests.
+  delayed commit, and forbidden weak-emulation tests;
+- deterministic charge vectors, overflow/rounding boundaries, mode eligibility,
+  physical-guard separation, and migration/restore assurance-transition tests.
 
 Exit criteria:
 
-- Local, SQL, SurrealDB, and Raft semantics can be declared honestly.
+- Local, SQL, SurrealDB, and Raft consistency, durability, charge, and physical-health
+  semantics can be declared honestly without treating logical or shared physical
+  bytes as exact attributable storage.
 - Focused `0.5.0` storage-contract pentest passes.
 
 ### 0.6.0 - Authenticated Record Format
@@ -420,15 +442,20 @@ Deliverables:
 
 - atomic publication, fsync policy, lock ownership, tombstones, and compaction;
 - snapshot iteration and platform-specific durability profiles;
+- declared `StorageChargeCapability`, versioned charge formula/vectors, and separate
+  filesystem free-space, temporary-write, and compaction-headroom guards;
 - conformance evidence distinguishing persistence from dynamic provider adapters.
 
 Verification:
 
-- crash-point, disk-full, torn-write, stale-lock, recovery, and platform tests.
+- crash-point, disk-full, torn-write, stale-lock, recovery, and platform tests;
+- charged-unit, allocation-granularity, compaction-overhead, accounting-version
+  migration/restore, and physical-guard conformance tests.
 
 Exit criteria:
 
-- A committed record survives documented crashes or reports indeterminate state.
+- A committed record survives documented crashes or reports indeterminate state, and
+  local storage declares and proves its actual charge-assurance profile.
 - Focused `0.14.0` local-storage pentest passes.
 
 ### 0.15.0 - PostgreSQL Storage Backend
@@ -439,15 +466,22 @@ Deliverables:
 
 - serializable transactions, revision CAS, atomic batches, and snapshot pagination;
 - durability acknowledgment, schema migration, and `SecretSource` credentials;
+- declared `StorageChargeCapability` with versioned PostgreSQL row/index/allocation
+  and worst-case write-overhead formula, independent from WAL, replica, temporary
+  space, bloat, and maintenance health guards;
 - explicit failover, timeout, and indeterminate-commit behavior through brokered egress.
 
 Verification:
 
-- rootless PostgreSQL conformance, fault, failover, migration, and rollback tests.
+- rootless PostgreSQL conformance, fault, failover, migration, and rollback tests;
+- charge-mode/formula vectors, checked bounds, schema/restore transition, WAL and
+  replica growth, temporary-space, bloat, and strict-admission eligibility tests.
 
 Exit criteria:
 
-- PostgreSQL storage passes the same opaque-record contract as local storage.
+- PostgreSQL storage passes the same opaque-record contract as local storage and
+  declares charge assurance without claiming exact per-object physical bytes when
+  shared SQL storage cannot attribute them.
 - Focused `0.15.0` PostgreSQL storage-backend pentest passes.
 
 ### 0.16.0 - SurrealDB Storage Backend
@@ -458,15 +492,21 @@ Deliverables:
 
 - transaction/revision mapping, atomic batches, snapshot pagination, and migrations;
 - capability declarations for unsupported consistency or durability semantics;
+- declared `StorageChargeCapability` with versioned SurrealDB record/index/allocation
+  and worst-case write-overhead formula, independent from MVCC, compaction, replica,
+  and temporary-space health guards;
 - `SecretSource` credentials and brokered outage/retry policy.
 
 Verification:
 
-- rootless SurrealDB conformance, fault, migration, and indeterminate-commit tests.
+- rootless SurrealDB conformance, fault, migration, and indeterminate-commit tests;
+- charge-mode/formula vectors, checked bounds, schema/restore transition, MVCC and
+  compaction lag, replica/temporary growth, and strict-admission eligibility tests.
 
 Exit criteria:
 
-- SurrealDB never claims guarantees its selected deployment mode lacks.
+- SurrealDB never claims consistency, durability, or charge guarantees its selected
+  deployment mode lacks.
 - Focused `0.16.0` SurrealDB storage-backend pentest passes.
 
 ### 0.17.0 - Provider Registry And Crypto Migration
@@ -1586,6 +1626,9 @@ Deliverables:
   peer queues, and snapshot chunks;
 - leader-finalized encrypted commands with nonce/ciphertext chosen before replication;
 - deterministic follower apply, log/snapshot persistence, and backpressure;
+- declared `StorageChargeCapability` for Raft state-machine records with versioned
+  log/snapshot/index charge formulas, separate from quorum replica, log-retention,
+  snapshot-temporary, and compaction-lag physical-health guards;
 - no barrier keys or follower-generated randomness in state-machine apply.
 
 Verification:
@@ -1593,12 +1636,16 @@ Verification:
 - model tests for elections, split votes, partitions, stale leaders, ReadIndex,
   transfer, AppendEntries conflicts, snapshot races, and membership changes;
 - fsync crash points, corrupt/truncated log recovery, bounded-message/window DoS,
-  deterministic replay, failover, and three-node conformance tests.
+  deterministic replay, failover, and three-node conformance tests;
+- charged-unit and formula-version vectors, checked bounds, snapshot/restore
+  transition, replica/log growth, compaction lag, and strict-admission eligibility
+  tests.
 
 Exit criteria:
 
 - Hard state and committed logs survive documented crashes, linearizable reads do
-  not depend on wall time, and identical commits produce identical follower state.
+  not depend on wall time, identical commits produce identical follower state, and
+  Raft declares charge assurance separately from cluster physical-health headroom.
 - Focused `0.67.0` Raft consensus-core pentest passes.
 
 ### 0.68.0 - Cluster Trust Bootstrap And Hybrid Identity
@@ -2035,19 +2082,25 @@ Deliverables:
 - metadata deletion has a separate idempotent
   `MetadataRetained -> DeletionRecorded -> MetadataRemoved -> ReservationReleased`
   lifecycle; the configured deletion condition and audit-outbox intent commit before
-  removal, a durable disposition tombstone remains, and duplicate or replayed
-  compaction/deletion requests return the existing state without repeating effects;
+  removal, the durable disposition tombstone is charged to a bounded operation/audit
+  retention pool before quarantine capacity is reduced or released, and duplicate or
+  replayed compaction/deletion requests return the existing state without repeating
+  effects;
 - crash recovery may temporarily preserve both full and compact representations and
   over-account their capacity, but compaction can never remove both representations,
   under-account committed storage, or reduce/release a reservation before its durable
   evidence disposition exists; audit-outbox failure leaves the earlier representation
   and reservation intact;
 - all manifest, index, proof, certificate/root metadata, record-framing, encryption,
-  and backend-allocation byte calculations use checked arithmetic; strict mode
-  requires a backend capability that reports committed charged bytes including actual
-  backend overhead and fails admission when that capability is absent; a temporary
-  accounting failure after a write retains the conservative reservation until exact
-  reconciliation succeeds;
+  and backend charge calculations use checked arithmetic and the committed `0.5.0`
+  formula version; strict mode admits only `ExactCommitted` or
+  `ConservativeUpperBound`, while `LogicalOnly` and `Unsupported` fail admission; a
+  temporary accounting failure after a write retains the conservative reservation
+  until reconciliation succeeds;
+- quota/reservation accounting uses those charged units, while independent physical
+  free-space and backend-health guards cover WAL/log growth, replicas, temporary
+  writes, MVCC/bloat, and compaction lag; physical pressure may reject new writes,
+  rotations, or rebuilds but never authorizes evidence compaction or deletion;
 - storage pressure, quota exhaustion, or demand from another operation never compacts
   or deletes quarantined evidence; these conditions apply backpressure and degraded
   health until the configured evidence condition is met or capacity is expanded;
@@ -2278,8 +2331,15 @@ Verification:
   audit-outbox failure during each disposition transition tests;
 - checked-arithmetic overflow and backend charged-byte accounting tests cover full
   manifests, indexes, Merkle proofs, certificate/root metadata, encrypted framing,
-  and backend overhead; crash tests permit temporary over-accounting but reject lost
-  representations during compaction, under-accounting, or early reservation release;
+  and versioned backend overhead under `ExactCommitted` and
+  `ConservativeUpperBound`; `LogicalOnly`/`Unsupported` strict refusal and crash tests
+  permit temporary over-accounting but reject lost representations during compaction,
+  under-accounting, or early reservation release;
+- local, PostgreSQL, SurrealDB, and Raft charge-assurance declarations, formula
+  vectors, migration/restore continuity, physical free-space/health guard separation,
+  and physical-pressure-without-evidence-deletion tests;
+- disposition-tombstone pool exhaustion, failed tombstone charge, crash after
+  tombstone charge before quarantine release, and duplicate/replayed release tests;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2328,7 +2388,9 @@ Exit criteria:
   hard-bounded, capacity failure remains safely fenced, and evidence is reduced only
   by its declared policy rather than storage pressure; crash-safe disposition keeps
   at least one authorized representation and never under-accounts or releases its
-  reservation before durable evidence and audit intent exist;
+  reservation before durable evidence and audit intent exist; strict accounting uses
+  exact or conservative versioned units independently from physical-health guards,
+  and quarantine release first charges its durable tombstone elsewhere;
   compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
