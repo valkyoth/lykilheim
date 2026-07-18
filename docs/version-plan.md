@@ -1896,22 +1896,36 @@ Deliverables:
   `AwaitingDestinationAck -> ReattestationRequired -> AwaitingDestinationAck`
   transitions; a non-compromise rotation may enter explicit degraded
   `RetirementDeferred` from `WriteEpochActive`, `Rewrapping`, or
-  `AwaitingDestinationAck` and may resume only at `Rewrapping` after capacity
-  readmission, while removal can enter terminal `DestinationFenced` from any
-  non-retired state;
+  `AwaitingDestinationAck`, recording its exact origin state and durable cursor,
+  while removal can enter terminal `DestinationFenced` from any non-retired state;
 - activation atomically makes the new epoch write-active and the old epoch
   decrypt-only through one durable source-side compare-and-set; activation and
   cancellation race through that same state revision, and `WriteEpochActive` makes
   terminal cancellation and old-write-epoch reactivation permanently invalid;
 - bounded destination-specific rewrap records independent progress, retry, pause,
   pre-activation cancellation, failure, and recovery state; a cancellation request
-  after `WriteEpochActive` may pause rewrap but cannot release required capacity or
-  restore writes under the old epoch;
+  after `WriteEpochActive` may pause rewrap but cannot release mandatory retention
+  capacity or restore writes under the old epoch;
 - permanent abandonment after activation enters `RetirementDeferred`: the new epoch
   remains write-active, the old epoch remains decrypt-only, residual old-epoch risk
-  and blocked retirement are reported as degraded health, and resumption requires
-  fresh capacity admission; compromise-driven rotation forbids this state and
-  remains fail closed until rewrap and retirement complete;
+  and blocked retirement are reported as degraded health; compromise-driven rotation
+  forbids this state and remains fail closed until rewrap and retirement complete;
+- for strict proof-retention rotations, mandatory retention capacity covers frozen
+  scope/result manifests, reserved or actual proof-seed material,
+  acceptance/evidence records, and retained checkpoint material; it remains
+  operation-bound from `WriteEpochActive` through `ProofAvailable` and cannot be
+  released by pause or `RetirementDeferred`;
+- transient execution capacity covers worker slots, scratch buffers, transport
+  windows, and provider concurrency; it may be released while deferred, but resume
+  requires idempotent operation-bound readmission that cannot duplicate either
+  transient accounting or mandatory retention reservations;
+- deferral from `WriteEpochActive` or `Rewrapping` resumes `Rewrapping` at the durable
+  cursor after transient-capacity readmission; deferral from
+  `AwaitingDestinationAck` first revalidates the unchanged result-manifest generation,
+  certificate, challenge, destination identity, and committed suite, then resumes
+  `AwaitingDestinationAck` or enters `ReattestationRequired` under the existing
+  identity/suite-transition contract; failed manifest validation cannot take either
+  resume edge and follows the generation-rebuild contract below;
 - `WriteEpochActive` durably freezes a canonical source scope manifest, expected
   cardinality, and scope commitment under the committed hash suite; its header
   binds snapshot/high-water mark, included backup/snapshot generations, and
@@ -1952,6 +1966,13 @@ Deliverables:
 - destination durably persists and freezes the canonical result manifest before
   signing its root, retaining it until source acceptance and evidence-retention
   requirements complete; unavailable or changed post-signing manifests fail closed;
+- when a signed result manifest can no longer be validated, one durable
+  compare-and-set advances its generation, invalidates the old certificate,
+  challenge, and page-authentication context, and returns to the result-manifest
+  rebuild subphase of `Rewrapping`; the old generation remains rejected after crash
+  or takeover, rebuild uses the unchanged frozen source scope, and a fresh challenge,
+  immutable manifest, and certificate are required before `AwaitingDestinationAck`;
+  a previously signed manifest is never mutated or silently reused;
 - every bounded resumable result page carries a hybrid-authenticated page transcript
   and Merkle range proof binding operation ID, source scope root, result root,
   manifest generation, index/range, continuation cursor, and total cardinality;
@@ -2017,22 +2038,26 @@ Deliverables:
   strict offline proof: ordinary mode permits destination result-manifest cleanup
   after authoritative online acceptance and normal evidence retention while source
   proof seed remains; strict mode refuses cleanup until `ProofAvailable`;
-- strict-policy admission obtains operation-bound durable reservations for source
-  proof-job/proof-seed count and bytes, each destination's frozen result-manifest
-  count and bytes, and checkpoint/inclusion-proof construction workspace; start
-  fails unless every reservation is confirmed and retained through proof availability
-  or a terminal pre-activation cancellation;
-- each participant has a closed strict reservation lifecycle: `Preparing -> Reserved
-  -> Activated -> AcceptanceCommitted -> ProofPending -> ProofAvailable -> Released`;
+- strict-policy admission obtains operation-bound mandatory retention reservations
+  for source proof-job/proof-seed count and bytes, each destination's frozen
+  result-manifest count and bytes, and retained checkpoint/inclusion-proof material,
+  plus separate transient execution admission; start fails unless all mandatory
+  reservations and initial execution capacity are confirmed, while mandatory
+  reservations remain through proof availability or terminal pre-activation
+  cancellation;
+- each participant's mandatory retention reservation has the closed lifecycle
+  `Preparing -> Reserved -> Activated -> AcceptanceCommitted -> ProofPending ->
+  ProofAvailable -> Released`;
   `Cancelled` is reachable only from `Preparing` or `Reserved` after durable
   rotation cancellation, and `Activated` means the source has committed
   `WriteEpochActive` and the participant has observed or reconciled that fact;
 - source activation and cancellation use one durable compare-and-set on the expected
   pre-activation operation revision; a stale cancellation loses once activation
   commits, including when its response is lost or a destination has not observed it;
-- strict reservations in `AcceptanceCommitted` or `ProofPending` cannot be cancelled
-  or released; proof work and reservation ownership may only pause, resume, or
-  transfer through the `0.19.0` takeover contract;
+- mandatory retention reservations in `Activated`, `AcceptanceCommitted`, or
+  `ProofPending` cannot be cancelled or released; proof work and reservation
+  ownership may only pause, resume, or transfer through the `0.19.0` takeover
+  contract;
 - every release is a compare-and-set bound to exact operation ID, participant,
   reservation generation, and expected current state; stale, replayed,
   cross-operation, cross-participant, or generation-substituted release fails closed;
@@ -2045,7 +2070,7 @@ Deliverables:
   operation remains pre-acceptance;
 - immediately before committing `WriteEpochActive`, source revalidates every
   participant reservation, generation, capacity, and state; after activation,
-  required reservations cannot be cancelled or released, and after
+  mandatory retention reservations cannot be cancelled or released, and after
   `AcceptanceCommitted`, source loss, destination removal, or operator action cannot
   erase strict evidence obligations;
 - strict admission also requires compatible `0.74.0` checkpoint topology, available
@@ -2148,6 +2173,11 @@ Verification:
 - planned `RetirementDeferred` entry, degraded-risk reporting, reservation retention,
   capacity readmission on resume, and compromise-driven deferred-retirement refusal
   tests;
+- mandatory-retention versus transient-execution accounting, deferred transient
+  release, resume without double reservation, and durable-cursor continuation tests;
+- deferral after certificate signing, unchanged-manifest resume, stale certificate
+  reuse, result-manifest generation advancement, identity/suite change during
+  deferral, and crash while invalidating an old signed generation tests;
 - simultaneous maximum-age and byte-limit breach during checkpoint outage preserves
   every seed, manifest, acceptance record, historical verification material, and
   partial proof, keeps `Retired`, and rejects new rotations;
@@ -2186,10 +2216,11 @@ Exit criteria:
   bypass fencing; backup/snapshot exclusions remain visible old-key exposure; only
   a witnessed and fenced destination can become authoritative, and one cluster owns
   each dynamic lease.
-- Strict reservations release only after `ProofAvailable` or terminal
-  pre-activation cancellation; once `WriteEpochActive` commits, cancellation cannot
-  restore the old write epoch or discard required capacity, and compromise-driven
-  rotation cannot defer retirement.
+- Strict mandatory-retention reservations release only after `ProofAvailable` or
+  terminal pre-activation cancellation; once `WriteEpochActive` commits,
+  cancellation cannot restore the old write epoch or discard that capacity; deferred
+  execution resumes without duplicate accounting or mutation/reuse of signed
+  manifests, and compromise-driven rotation cannot defer retirement.
 - Focused `0.76.0` replication and DR pentest passes.
 
 ## Phase 8: Native Dynamic Provider Adapters
