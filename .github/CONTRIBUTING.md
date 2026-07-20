@@ -13,7 +13,7 @@ license.
 ## Development Setup
 
 Use the pinned Rust toolchain from `rust-toolchain.toml`. The project currently
-targets Rust 1.96.0.
+targets Rust 1.97.0.
 
 ```bash
 scripts/checks.sh

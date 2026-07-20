@@ -23,7 +23,7 @@ Released versions are never renumbered.
 
 - Project name: Lykilheim.
 - License: EUPL-1.2.
-- Toolchain: Rust 1.96.1, pinned in `rust-toolchain.toml`.
+- Toolchain: Rust 1.97.1, pinned in `rust-toolchain.toml`.
 - Delivery targets: portable standalone compiled binary and rootless Podman on Wolfi.
 - Portability target: Linux, macOS, Windows, and BSD-style Unix for the binary;
   the hardened Wolfi container remains Linux-only.

@@ -11,8 +11,8 @@ if ! grep -q 'EUROPEAN UNION PUBLIC LICENCE v. 1.2' LICENSE; then
     exit 1
 fi
 
-if ! grep -q '^channel = "1.96.1"$' rust-toolchain.toml; then
-    echo "release metadata: rust-toolchain.toml must pin Rust 1.96.1" >&2
+if ! grep -q '^channel = "1.97.1"$' rust-toolchain.toml; then
+    echo "release metadata: rust-toolchain.toml must pin Rust 1.97.1" >&2
     exit 1
 fi
 
@@ -86,8 +86,8 @@ if [ -f Cargo.toml ]; then
         exit 1
     fi
 
-    if ! grep -q '^rust-version = "1.96"$' Cargo.toml; then
-        echo "release metadata: Cargo.toml must declare rust-version = \"1.96\"" >&2
+    if ! grep -q '^rust-version = "1.97"$' Cargo.toml; then
+        echo "release metadata: Cargo.toml must declare rust-version = \"1.97\"" >&2
         exit 1
     fi
 
@@ -106,13 +106,13 @@ if [ -f Cargo.toml ]; then
         exit 1
     fi
 
-    if ! grep -q '^ARG RUST_IMAGE=docker.io/library/rust:1.96.1-' Containerfile; then
-        echo "release metadata: Containerfile must use Rust 1.96.1" >&2
+    if ! grep -q '^ARG RUST_IMAGE=docker.io/library/rust:1.97.1-' Containerfile; then
+        echo "release metadata: Containerfile must use Rust 1.97.1" >&2
         exit 1
     fi
 
-    if ! grep -q '^ARG RUST_IMAGE=docker.io/library/rust:1.96.1-' containers/Containerfile.wolfi; then
-        echo "release metadata: Wolfi Containerfile must use Rust 1.96.1" >&2
+    if ! grep -q '^ARG RUST_IMAGE=docker.io/library/rust:1.97.1-' containers/Containerfile.wolfi; then
+        echo "release metadata: Wolfi Containerfile must use Rust 1.97.1" >&2
         exit 1
     fi
 fi
